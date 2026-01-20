@@ -79,6 +79,10 @@ function ReceptionistPatients() {
     setEditingPatient(null)
   }
 
+  const handleDoctorChange = (nextDoctorId: string) => {
+    setDoctorId(nextDoctorId)
+  }
+
   return (
     <Stack spacing={3}>
       <Box>
@@ -241,6 +245,3 @@ function ReceptionistPatients() {
 }
 
 export default ReceptionistPatients
-  const handleDoctorChange = (nextDoctorId: string) => {
-    setDoctorId(nextDoctorId)
-  }

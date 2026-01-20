@@ -58,7 +58,6 @@ function ReceptionistDashboard() {
   const [doctorId, setDoctorId] = useState(unitDoctors[0]?.id ?? '')
   const [view, setView] = useState<CalendarView>('timeGridWeek')
   const [dialogOpen, setDialogOpen] = useState(false)
-  const [selectedRange, setSelectedRange] = useState<{ start: string; end: string } | null>(null)
   const [patientId, setPatientId] = useState('')
   const [patientFilterId, setPatientFilterId] = useState('all')
   const [patientFilterText, setPatientFilterText] = useState('')
@@ -125,7 +124,6 @@ function ReceptionistDashboard() {
     setAddingPatient(false)
     setNewPatientName('')
     setNewPatientPhone('')
-    setSelectedRange({ start: info.startStr, end: info.endStr })
     setAppointmentStart(info.startStr)
     setDurationMinutes(diffMinutes(info.startStr, info.endStr) || constraints.slotMinutes)
     setMode('create')
@@ -181,7 +179,6 @@ function ReceptionistDashboard() {
     }
 
     setDialogOpen(false)
-    setSelectedRange(null)
     setError(null)
   }
 
