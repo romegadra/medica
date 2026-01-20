@@ -1,4 +1,4 @@
-import { AppBar, Box, Button, Container, Toolbar, Typography } from '@mui/material'
+import { Alert, AppBar, Box, Button, Container, LinearProgress, Toolbar, Typography } from '@mui/material'
 import { Link, Navigate, Route, Routes } from 'react-router-dom'
 import { useAuth } from './auth/AuthContext'
 import ProtectedRoute from './components/ProtectedRoute'
@@ -13,9 +13,11 @@ import DoctorVisits from './pages/DoctorVisits'
 import Login from './pages/Login'
 import ReceptionistDashboard from './pages/ReceptionistDashboard'
 import ReceptionistPatients from './pages/ReceptionistPatients'
+import { useData } from './data/DataContext'
 
 function App() {
   const { role, logout } = useAuth()
+  const { loading, error, refresh } = useData()
 
   return (
     <Box sx={{ minHeight: '100vh', bgcolor: 'background.default' }}>
@@ -39,7 +41,13 @@ function App() {
           )}
         </Toolbar>
       </AppBar>
+      {loading && <LinearProgress />}
       <Container sx={{ py: { xs: 4, md: 6 } }}>
+        {error && (
+          <Alert severity="error" sx={{ mb: 3 }} onClose={refresh}>
+            {error}
+          </Alert>
+        )}
         <Routes>
           <Route path="/login" element={<Login />} />
           <Route

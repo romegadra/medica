@@ -16,7 +16,7 @@ import {
 } from '@mui/material'
 import DeleteIcon from '@mui/icons-material/Delete'
 import EditIcon from '@mui/icons-material/Edit'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useData } from '../data/DataContext'
 import type { SpecialtyField, SpecialtyFieldType, SpecialtyTemplate } from '../data/types'
 
@@ -43,6 +43,12 @@ function AdminTemplates() {
     })
     setSpecialtyId(specialties[0]?.id ?? '')
   }
+
+  useEffect(() => {
+    if (!specialtyId && specialties.length > 0) {
+      setSpecialtyId(specialties[0].id)
+    }
+  }, [specialties, specialtyId])
 
   const handleSaveTemplate = () => {
     if (!editingTemplate) return

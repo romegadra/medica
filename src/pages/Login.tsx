@@ -1,5 +1,5 @@
 import { Box, Button, MenuItem, Paper, Stack, TextField, Typography } from '@mui/material'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useAuth } from '../auth/AuthContext'
 import { useData } from '../data/DataContext'
 
@@ -84,3 +84,14 @@ function Login() {
 }
 
 export default Login
+  useEffect(() => {
+    if (!doctorId && doctors.length > 0) {
+      setDoctorId(doctors[0].id)
+    }
+  }, [doctors, doctorId])
+
+  useEffect(() => {
+    if (!receptionistId && receptionists.length > 0) {
+      setReceptionistId(receptionists[0].id)
+    }
+  }, [receptionists, receptionistId])

@@ -21,7 +21,7 @@ import {
 } from '@mui/material'
 import DeleteIcon from '@mui/icons-material/Delete'
 import EditIcon from '@mui/icons-material/Edit'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useData } from '../data/DataContext'
 import type { Doctor } from '../data/types'
 
@@ -58,6 +58,18 @@ function AdminDoctors() {
     setCanEditPatients(true)
     setCanManageVisits(true)
   }
+
+  useEffect(() => {
+    if (!specialtyId && specialties.length > 0) {
+      setSpecialtyId(specialties[0].id)
+    }
+  }, [specialties, specialtyId])
+
+  useEffect(() => {
+    if (!unitId && units.length > 0) {
+      setUnitId(units[0].id)
+    }
+  }, [units, unitId])
 
   const handleEditSave = () => {
     if (!editingDoctor) return

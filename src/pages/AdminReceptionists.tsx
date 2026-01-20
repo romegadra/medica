@@ -19,7 +19,7 @@ import {
 } from '@mui/material'
 import DeleteIcon from '@mui/icons-material/Delete'
 import EditIcon from '@mui/icons-material/Edit'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useData } from '../data/DataContext'
 import type { Receptionist } from '../data/types'
 
@@ -46,6 +46,12 @@ function AdminReceptionists() {
     setAddress('')
     setPhone('')
   }
+
+  useEffect(() => {
+    if (!unitId && units.length > 0) {
+      setUnitId(units[0].id)
+    }
+  }, [units, unitId])
 
   const handleEditSave = () => {
     if (!editingReceptionist) return

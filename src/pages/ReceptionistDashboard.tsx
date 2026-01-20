@@ -132,7 +132,7 @@ function ReceptionistDashboard() {
     setDialogOpen(true)
   }
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!appointmentStart || (!addingPatient && !patientId)) {
       setError('Selecciona un paciente para esta cita.')
       return
@@ -172,7 +172,10 @@ function ReceptionistDashboard() {
       end,
     }
 
-    const result = mode === 'edit' ? updateAppointment(appointment) : addAppointment(appointment)
+    const result =
+      mode === 'edit'
+        ? await updateAppointment(appointment)
+        : await addAppointment(appointment)
     if (!result.ok) {
       setError(result.reason ?? 'No se pudo guardar la cita.')
       return
@@ -303,10 +306,10 @@ function ReceptionistDashboard() {
               setView('timeGridWeek')
             }
           }}
-          eventDrop={(info) => {
+          eventDrop={async (info) => {
             const appointment = appointments.find((item) => item.id === info.event.id)
             if (!appointment) return
-            const result = updateAppointment({
+            const result = await updateAppointment({
               ...appointment,
               start: info.event.start?.toISOString() ?? appointment.start,
               end: info.event.end?.toISOString() ?? appointment.end,
@@ -316,10 +319,10 @@ function ReceptionistDashboard() {
               info.revert()
             }
           }}
-          eventResize={(info) => {
+          eventResize={async (info) => {
             const appointment = appointments.find((item) => item.id === info.event.id)
             if (!appointment) return
-            const result = updateAppointment({
+            const result = await updateAppointment({
               ...appointment,
               start: info.event.start?.toISOString() ?? appointment.start,
               end: info.event.end?.toISOString() ?? appointment.end,

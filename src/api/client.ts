@@ -19,7 +19,13 @@ export async function apiRequest<T>(
 
   if (!response.ok) {
     const text = await response.text()
-    throw new Error(text || response.statusText)
+    const error = new Error(text || response.statusText) as Error & { status?: number }
+    error.status = response.status
+    throw error
+  }
+
+  if (response.status === 204) {
+    return undefined as T
   }
 
   return (await response.json()) as T
