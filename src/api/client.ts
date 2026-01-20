@@ -1,6 +1,6 @@
 type HttpMethod = 'GET' | 'POST' | 'PUT' | 'DELETE'
 
-const baseUrl = import.meta.env.VITE_API_URL ?? 'https://medica-backend-production-a788.up.railway.app'
+const baseUrl = import.meta.env.VITE_API_URL ?? 'https://medica-backend-production-a788.up.railway.app/api'
 
 export async function apiRequest<T>(
   path: string,
