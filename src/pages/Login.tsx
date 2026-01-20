@@ -9,6 +9,18 @@ function Login() {
   const [doctorId, setDoctorId] = useState(doctors[0]?.id ?? '')
   const [receptionistId, setReceptionistId] = useState(receptionists[0]?.id ?? '')
 
+  useEffect(() => {
+    if (!doctorId && doctors.length > 0) {
+      setDoctorId(doctors[0].id)
+    }
+  }, [doctors, doctorId])
+
+  useEffect(() => {
+    if (!receptionistId && receptionists.length > 0) {
+      setReceptionistId(receptionists[0].id)
+    }
+  }, [receptionists, receptionistId])
+
   return (
     <Box sx={{ display: 'flex', justifyContent: 'center' }}>
       <Paper sx={{ p: 4, maxWidth: 420, width: '100%' }} elevation={2}>
@@ -84,14 +96,3 @@ function Login() {
 }
 
 export default Login
-  useEffect(() => {
-    if (!doctorId && doctors.length > 0) {
-      setDoctorId(doctors[0].id)
-    }
-  }, [doctors, doctorId])
-
-  useEffect(() => {
-    if (!receptionistId && receptionists.length > 0) {
-      setReceptionistId(receptionists[0].id)
-    }
-  }, [receptionists, receptionistId])
