@@ -23,6 +23,9 @@ type DataState = {
   loading: boolean
   error: string | null
   refresh: () => void
+  addSpecialty: (specialty: Specialty) => void
+  updateSpecialty: (specialty: Specialty) => void
+  removeSpecialty: (id: string) => void
   addUnit: (unit: Unit) => void
   updateUnit: (unit: Unit) => void
   removeUnit: (id: string) => void
@@ -128,6 +131,29 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       loading,
       error,
       refresh,
+      addSpecialty: (specialty) => {
+        void (async () => {
+          const created = await apiRequest<Specialty>('/specialties', 'POST', specialty)
+          setSpecialtyList((prev) => [...prev, created])
+        })()
+      },
+      updateSpecialty: (specialty) => {
+        void (async () => {
+          const updated = await apiRequest<Specialty>(
+            `/specialties/${specialty.id}`,
+            'PUT',
+            specialty,
+          )
+          setSpecialtyList((prev) => prev.map((item) => (item.id === updated.id ? updated : item)))
+        })()
+      },
+      removeSpecialty: (id) => {
+        void (async () => {
+          await apiRequest<void>(`/specialties/${id}`, 'DELETE')
+          setSpecialtyList((prev) => prev.filter((item) => item.id !== id))
+          setTemplateList((prev) => prev.filter((item) => item.specialtyId !== id))
+        })()
+      },
       addUnit: (unit) => {
         void (async () => {
           const created = await apiRequest<Unit>('/units', 'POST', unit)

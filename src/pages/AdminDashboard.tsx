@@ -127,6 +127,18 @@ function AdminDashboard() {
 
       <Paper sx={{ p: 3 }} elevation={2}>
         <Stack spacing={2}>
+          <Typography variant="h6">Especialidades</Typography>
+          <Typography variant="body2" color="text.secondary">
+            Administra el catalogo de especialidades.
+          </Typography>
+          <Button component={Link} to="/admin/specialties" variant="outlined">
+            Administrar especialidades
+          </Button>
+        </Stack>
+      </Paper>
+
+      <Paper sx={{ p: 3 }} elevation={2}>
+        <Stack spacing={2}>
           <Typography variant="h6">Resumen metricas</Typography>
           <Divider />
           <Typography variant="body2" color="text.secondary">

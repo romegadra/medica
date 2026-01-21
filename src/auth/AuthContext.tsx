@@ -1,4 +1,5 @@
 import { createContext, useContext, useEffect, useMemo, useState } from 'react'
+import { apiRequest } from '../api/client'
 
 export type Role = 'admin' | 'receptionist' | 'doctor'
 
@@ -7,7 +8,8 @@ type AuthState = {
   doctorId: string | null
   unitId: string | null
   receptionistId: string | null
-  login: (role: Role) => void
+  token: string | null
+  login: (email: string, password: string) => Promise<{ ok: boolean; error?: string }>
   loginReceptionist: (receptionistId: string, unitId: string) => void
   loginDoctor: (doctorId: string) => void
   logout: () => void
@@ -19,12 +21,14 @@ const storageRoleKey = 'med.role'
 const storageDoctorKey = 'med.doctorId'
 const storageUnitKey = 'med.unitId'
 const storageReceptionistKey = 'med.receptionistId'
+const storageTokenKey = 'med.token'
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [role, setRole] = useState<Role | null>(null)
   const [doctorId, setDoctorId] = useState<string | null>(null)
   const [unitId, setUnitId] = useState<string | null>(null)
   const [receptionistId, setReceptionistId] = useState<string | null>(null)
+  const [token, setToken] = useState<string | null>(null)
 
   useEffect(() => {
     const stored = window.localStorage.getItem(storageRoleKey) as Role | null
@@ -39,6 +43,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUnitId(window.localStorage.getItem(storageUnitKey))
       setReceptionistId(window.localStorage.getItem(storageReceptionistKey))
     }
+    const storedToken = window.localStorage.getItem(storageTokenKey)
+    if (storedToken) {
+      setToken(storedToken)
+    }
   }, [])
 
   const value = useMemo(
@@ -47,15 +55,38 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       doctorId,
       unitId,
       receptionistId,
-      login: (nextRole: Role) => {
-        window.localStorage.setItem(storageRoleKey, nextRole)
-        setRole(nextRole)
-        setDoctorId(null)
-        setUnitId(null)
-        window.localStorage.removeItem(storageDoctorKey)
-        window.localStorage.removeItem(storageUnitKey)
-        window.localStorage.removeItem(storageReceptionistKey)
-        setReceptionistId(null)
+      token,
+      login: async (email: string, password: string) => {
+        try {
+          const response = await apiRequest<{
+            token: string
+            role: Role
+            doctorId?: string | null
+            unitId?: string | null
+          }>('/auth/login', 'POST', { email, password })
+          window.localStorage.setItem(storageRoleKey, response.role)
+          window.localStorage.setItem(storageTokenKey, response.token)
+          if (response.doctorId) {
+            window.localStorage.setItem(storageDoctorKey, response.doctorId)
+          } else {
+            window.localStorage.removeItem(storageDoctorKey)
+          }
+          if (response.unitId) {
+            window.localStorage.setItem(storageUnitKey, response.unitId)
+          } else {
+            window.localStorage.removeItem(storageUnitKey)
+          }
+          window.localStorage.removeItem(storageReceptionistKey)
+          setRole(response.role)
+          setDoctorId(response.doctorId ?? null)
+          setUnitId(response.unitId ?? null)
+          setReceptionistId(null)
+          setToken(response.token)
+          return { ok: true }
+        } catch (err) {
+          const message = err instanceof Error ? err.message : 'Error de autenticación'
+          return { ok: false, error: message }
+        }
       },
       loginReceptionist: (nextReceptionistId: string, nextUnitId: string) => {
         window.localStorage.setItem(storageRoleKey, 'receptionist')
@@ -80,13 +111,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         window.localStorage.removeItem(storageDoctorKey)
         window.localStorage.removeItem(storageUnitKey)
         window.localStorage.removeItem(storageReceptionistKey)
+        window.localStorage.removeItem(storageTokenKey)
         setRole(null)
         setDoctorId(null)
         setUnitId(null)
         setReceptionistId(null)
+        setToken(null)
       },
     }),
-    [role, doctorId, unitId, receptionistId],
+    [role, doctorId, unitId, receptionistId, token],
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

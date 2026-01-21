@@ -1,6 +1,7 @@
 type HttpMethod = 'GET' | 'POST' | 'PUT' | 'DELETE'
 
 const baseUrl = import.meta.env.VITE_API_URL ?? 'https://medica-backend-production-a788.up.railway.app/api'
+const tokenKey = 'med.token'
 
 export async function apiRequest<T>(
   path: string,
@@ -8,11 +9,12 @@ export async function apiRequest<T>(
   body?: unknown,
   token?: string,
 ): Promise<T> {
+  const storedToken = token ?? window.localStorage.getItem(tokenKey) ?? undefined
   const response = await fetch(`${baseUrl}${path}`, {
     method,
     headers: {
       'Content-Type': 'application/json',
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...(storedToken ? { Authorization: `Bearer ${storedToken}` } : {}),
     },
     body: body ? JSON.stringify(body) : undefined,
   })
