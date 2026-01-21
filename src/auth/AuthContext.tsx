@@ -9,9 +9,11 @@ type AuthState = {
   unitId: string | null
   receptionistId: string | null
   token: string | null
+  mustChangePassword: boolean
   login: (email: string, password: string) => Promise<{ ok: boolean; error?: string }>
   loginReceptionist: (receptionistId: string, unitId: string) => void
   loginDoctor: (doctorId: string) => void
+  markPasswordChanged: () => void
   logout: () => void
 }
 
@@ -22,6 +24,7 @@ const storageDoctorKey = 'med.doctorId'
 const storageUnitKey = 'med.unitId'
 const storageReceptionistKey = 'med.receptionistId'
 const storageTokenKey = 'med.token'
+const storageMustChangeKey = 'med.mustChangePassword'
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [role, setRole] = useState<Role | null>(null)
@@ -29,6 +32,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [unitId, setUnitId] = useState<string | null>(null)
   const [receptionistId, setReceptionistId] = useState<string | null>(null)
   const [token, setToken] = useState<string | null>(null)
+  const [mustChangePassword, setMustChangePassword] = useState(false)
 
   useEffect(() => {
     const stored = window.localStorage.getItem(storageRoleKey) as Role | null
@@ -47,6 +51,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (storedToken) {
       setToken(storedToken)
     }
+    const storedMustChange = window.localStorage.getItem(storageMustChangeKey)
+    if (storedMustChange === 'true') {
+      setMustChangePassword(true)
+    }
   }, [])
 
   const value = useMemo(
@@ -56,6 +64,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       unitId,
       receptionistId,
       token,
+      mustChangePassword,
       login: async (email: string, password: string) => {
         try {
           const response = await apiRequest<{
@@ -63,6 +72,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             role: Role
             doctorId?: string | null
             unitId?: string | null
+            mustChangePassword?: boolean
           }>('/auth/login', 'POST', { email, password })
           window.localStorage.setItem(storageRoleKey, response.role)
           window.localStorage.setItem(storageTokenKey, response.token)
@@ -77,11 +87,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             window.localStorage.removeItem(storageUnitKey)
           }
           window.localStorage.removeItem(storageReceptionistKey)
+          if (response.mustChangePassword) {
+            window.localStorage.setItem(storageMustChangeKey, 'true')
+          } else {
+            window.localStorage.removeItem(storageMustChangeKey)
+          }
           setRole(response.role)
           setDoctorId(response.doctorId ?? null)
           setUnitId(response.unitId ?? null)
           setReceptionistId(null)
           setToken(response.token)
+          setMustChangePassword(Boolean(response.mustChangePassword))
           return { ok: true }
         } catch (err) {
           const message = err instanceof Error ? err.message : 'Error de autenticación'
@@ -106,20 +122,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         window.localStorage.removeItem(storageReceptionistKey)
         setReceptionistId(null)
       },
+      markPasswordChanged: () => {
+        window.localStorage.removeItem(storageMustChangeKey)
+        setMustChangePassword(false)
+      },
       logout: () => {
         window.localStorage.removeItem(storageRoleKey)
         window.localStorage.removeItem(storageDoctorKey)
         window.localStorage.removeItem(storageUnitKey)
         window.localStorage.removeItem(storageReceptionistKey)
         window.localStorage.removeItem(storageTokenKey)
+        window.localStorage.removeItem(storageMustChangeKey)
         setRole(null)
         setDoctorId(null)
         setUnitId(null)
         setReceptionistId(null)
         setToken(null)
+        setMustChangePassword(false)
       },
     }),
-    [role, doctorId, unitId, receptionistId, token],
+    [role, doctorId, unitId, receptionistId, token, mustChangePassword],
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

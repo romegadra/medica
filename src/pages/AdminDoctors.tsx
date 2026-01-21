@@ -28,6 +28,7 @@ import type { Doctor } from '../data/types'
 function AdminDoctors() {
   const { doctors, addDoctor, updateDoctor, removeDoctor, units, specialties } = useData()
   const [name, setName] = useState('')
+  const [email, setEmail] = useState('')
   const [specialtyId, setSpecialtyId] = useState(specialties[0]?.id ?? '')
   const [phone, setPhone] = useState('')
   const [licenseNumber, setLicenseNumber] = useState('')
@@ -40,10 +41,12 @@ function AdminDoctors() {
   const handleAdd = () => {
     const trimmed = name.trim()
     if (!trimmed) return
+    if (!email.trim()) return
     if (!unitId) return
     addDoctor({
       id: `doc-${Date.now()}`,
       name: trimmed,
+      email: email.trim(),
       unitId,
       specialtyId: specialtyId || undefined,
       phone: phone.trim() || undefined,
@@ -52,6 +55,7 @@ function AdminDoctors() {
       canManageVisits,
     })
     setName('')
+    setEmail('')
     setSpecialtyId(specialties[0]?.id ?? '')
     setPhone('')
     setLicenseNumber('')
@@ -96,6 +100,12 @@ function AdminDoctors() {
             label="Nombre del doctor"
             value={name}
             onChange={(event) => setName(event.target.value)}
+          />
+          <TextField
+            label="Correo"
+            type="email"
+            value={email}
+            onChange={(event) => setEmail(event.target.value)}
           />
           <TextField
             label="Especialidad"
@@ -149,9 +159,12 @@ function AdminDoctors() {
               </MenuItem>
             ))}
           </TextField>
-          <Button variant="contained" onClick={handleAdd} disabled={!name.trim()}>
+          <Button variant="contained" onClick={handleAdd} disabled={!name.trim() || !email.trim()}>
             Agregar doctor
           </Button>
+          <Typography variant="caption" color="text.secondary">
+            Se creará un usuario con contraseña temporal definida en el backend.
+          </Typography>
         </Stack>
       </Paper>
 
@@ -162,6 +175,7 @@ function AdminDoctors() {
             <TableHead>
               <TableRow>
                 <TableCell>Doctor</TableCell>
+                <TableCell>Correo</TableCell>
                 <TableCell>Especialidad</TableCell>
                 <TableCell>Celular</TableCell>
                 <TableCell>Numero de cedula</TableCell>
@@ -175,6 +189,7 @@ function AdminDoctors() {
               {doctors.map((doctor) => (
                 <TableRow key={doctor.id}>
                   <TableCell>{doctor.name}</TableCell>
+                  <TableCell>{doctor.email ?? '-'}</TableCell>
                   <TableCell>
                     {specialties.find((specialty) => specialty.id === doctor.specialtyId)?.name ?? '-'}
                   </TableCell>
@@ -207,6 +222,16 @@ function AdminDoctors() {
               value={editingDoctor?.name ?? ''}
               onChange={(event) =>
                 setEditingDoctor((prev) => (prev ? { ...prev, name: event.target.value } : prev))
+              }
+            />
+            <TextField
+              label="Correo"
+              type="email"
+              value={editingDoctor?.email ?? ''}
+              onChange={(event) =>
+                setEditingDoctor((prev) =>
+                  prev ? { ...prev, email: event.target.value } : prev,
+                )
               }
             />
             <TextField

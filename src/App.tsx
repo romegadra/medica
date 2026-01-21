@@ -11,13 +11,14 @@ import AdminSpecialties from './pages/AdminSpecialties'
 import DoctorDashboard from './pages/DoctorDashboard'
 import DoctorPatients from './pages/DoctorPatients'
 import DoctorVisits from './pages/DoctorVisits'
+import ChangePassword from './pages/ChangePassword'
 import Login from './pages/Login'
 import ReceptionistDashboard from './pages/ReceptionistDashboard'
 import ReceptionistPatients from './pages/ReceptionistPatients'
 import { useData } from './data/DataContext'
 
 function App() {
-  const { role, logout } = useAuth()
+  const { role, logout, mustChangePassword } = useAuth()
   const { loading, error, refresh } = useData()
 
   return (
@@ -51,6 +52,14 @@ function App() {
         )}
         <Routes>
           <Route path="/login" element={<Login />} />
+          <Route
+            path="/change-password"
+            element={
+              <ProtectedRoute allowed={['admin', 'receptionist', 'doctor']}>
+                <ChangePassword />
+              </ProtectedRoute>
+            }
+          />
           <Route
             path="/admin"
             element={
@@ -144,7 +153,15 @@ function App() {
             element={
               role ? (
                 <Navigate
-                  to={role === 'admin' ? '/admin' : role === 'receptionist' ? '/reception' : '/doctor'}
+                  to={
+                    mustChangePassword
+                      ? '/change-password'
+                      : role === 'admin'
+                        ? '/admin'
+                        : role === 'receptionist'
+                          ? '/reception'
+                          : '/doctor'
+                  }
                   replace
                 />
               ) : (

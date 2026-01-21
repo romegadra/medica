@@ -26,6 +26,7 @@ import type { Receptionist } from '../data/types'
 function AdminReceptionists() {
   const { units, receptionists, addReceptionist, updateReceptionist, removeReceptionist } = useData()
   const [name, setName] = useState('')
+  const [email, setEmail] = useState('')
   const [address, setAddress] = useState('')
   const [phone, setPhone] = useState('')
   const [unitId, setUnitId] = useState(units[0]?.id ?? '')
@@ -34,15 +35,17 @@ function AdminReceptionists() {
 
   const handleAdd = () => {
     const trimmed = name.trim()
-    if (!trimmed || !unitId) return
+    if (!trimmed || !unitId || !email.trim()) return
     addReceptionist({
       id: `rec-${Date.now()}`,
       name: trimmed,
+      email: email.trim(),
       address: address.trim(),
       phone: phone.trim(),
       unitId,
     })
     setName('')
+    setEmail('')
     setAddress('')
     setPhone('')
   }
@@ -80,6 +83,12 @@ function AdminReceptionists() {
             onChange={(event) => setName(event.target.value)}
           />
           <TextField
+            label="Correo"
+            type="email"
+            value={email}
+            onChange={(event) => setEmail(event.target.value)}
+          />
+          <TextField
             label="Direccion"
             value={address}
             onChange={(event) => setAddress(event.target.value)}
@@ -101,9 +110,12 @@ function AdminReceptionists() {
               </MenuItem>
             ))}
           </TextField>
-          <Button variant="contained" onClick={handleAdd} disabled={!name.trim()}>
+          <Button variant="contained" onClick={handleAdd} disabled={!name.trim() || !email.trim()}>
             Agregar recepcionista
           </Button>
+          <Typography variant="caption" color="text.secondary">
+            Se creará un usuario con contraseña temporal definida en el backend.
+          </Typography>
         </Stack>
       </Paper>
 
@@ -114,6 +126,7 @@ function AdminReceptionists() {
             <TableHead>
               <TableRow>
                 <TableCell>Recepcionista</TableCell>
+                <TableCell>Correo</TableCell>
                 <TableCell>Direccion</TableCell>
                 <TableCell>Celular</TableCell>
                 <TableCell>Unidad</TableCell>
@@ -124,6 +137,7 @@ function AdminReceptionists() {
               {receptionists.map((receptionist) => (
                 <TableRow key={receptionist.id}>
                   <TableCell>{receptionist.name}</TableCell>
+                  <TableCell>{receptionist.email ?? '-'}</TableCell>
                   <TableCell>{receptionist.address}</TableCell>
                   <TableCell>{receptionist.phone}</TableCell>
                   <TableCell>{units.find((unit) => unit.id === receptionist.unitId)?.name ?? 'Unidad'}</TableCell>
@@ -156,6 +170,16 @@ function AdminReceptionists() {
               value={editingReceptionist?.name ?? ''}
               onChange={(event) =>
                 setEditingReceptionist((prev) => (prev ? { ...prev, name: event.target.value } : prev))
+              }
+            />
+            <TextField
+              label="Correo"
+              type="email"
+              value={editingReceptionist?.email ?? ''}
+              onChange={(event) =>
+                setEditingReceptionist((prev) =>
+                  prev ? { ...prev, email: event.target.value } : prev,
+                )
               }
             />
             <TextField

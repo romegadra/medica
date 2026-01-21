@@ -1,6 +1,7 @@
 export type Doctor = {
   id: string
   name: string
+  email?: string
   unitId: string
   specialtyId?: string
   phone?: string
@@ -59,6 +60,7 @@ export type Specialty = {
 export type Receptionist = {
   id: string
   name: string
+  email?: string
   address: string
   phone: string
   unitId: string
