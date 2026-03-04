@@ -2,6 +2,9 @@ type HttpMethod = 'GET' | 'POST' | 'PUT' | 'DELETE'
 
 const baseUrl = import.meta.env.VITE_API_URL ?? 'https://medica-backend-production-a788.up.railway.app/api'
 const tokenKey = 'med.token'
+// Debug helper to confirm which API base URL the build is using.
+// eslint-disable-next-line no-console
+console.info('[API] Base URL:', baseUrl)
 
 export async function apiRequest<T>(
   path: string,
