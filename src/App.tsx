@@ -16,6 +16,7 @@ import Login from './pages/Login'
 import ReceptionistDashboard from './pages/ReceptionistDashboard'
 import ReceptionistPatients from './pages/ReceptionistPatients'
 import { useData } from './data/DataContext'
+import logo from './assets/MN-Logo.jpg'
 
 function App() {
   const { role, logout, mustChangePassword } = useAuth()
@@ -23,13 +24,16 @@ function App() {
 
   return (
     <Box sx={{ minHeight: '100vh', bgcolor: 'background.default' }}>
-      <AppBar position="static" color="transparent" elevation={0}>
-        <Toolbar sx={{ gap: 2 }}>
-          <Typography variant="h6" sx={{ flexGrow: 1, fontWeight: 600 }}>
-            Agenda Médica
-          </Typography>
+      <AppBar position="static" color="transparent" elevation={0} sx={{ pt: 1 }}>
+        <Toolbar sx={{ alignItems: 'center', minHeight: 64, position: 'relative', justifyContent: 'center' }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+            <Box component="img" src={logo} alt="Medflow" sx={{ height: 80 }} />
+            <Typography variant="h6" sx={{ fontWeight: 600 }}>
+              Agenda Médica
+            </Typography>
+          </Box>
           {role && (
-            <>
+            <Box sx={{ position: 'absolute', right: 0, display: 'flex', gap: 1 }}>
               <Button
                 component={Link}
                 to={role === 'admin' ? '/admin' : role === 'receptionist' ? '/reception' : '/doctor'}
@@ -39,7 +43,7 @@ function App() {
               <Button onClick={logout} color="inherit">
                 Salir
               </Button>
-            </>
+            </Box>
           )}
         </Toolbar>
       </AppBar>
