@@ -27,12 +27,24 @@ import { useEffect, useMemo, useState } from 'react'
 import { apiRequest } from '../api/client'
 import { useAuth } from '../auth/AuthContext'
 import DoctorScheduleManager from '../components/DoctorScheduleManager'
+import { useToast } from '../components/ToastProvider'
 import { useData } from '../data/DataContext'
 import type { Doctor } from '../data/types'
+
+function getErrorMessage(err: unknown, fallback: string) {
+  if (!(err instanceof Error)) return fallback
+  try {
+    const parsed = JSON.parse(err.message) as { error?: string }
+    return parsed.error ?? fallback
+  } catch {
+    return err.message || fallback
+  }
+}
 
 function AdminDoctors() {
   const { doctors, addDoctor, updateDoctor, removeDoctor, units, specialties } = useData()
   const { role, unitId: adminUnitId } = useAuth()
+  const { showToast } = useToast()
   const visibleUnits = useMemo(
     () => (role === 'admin' && adminUnitId ? units.filter((unit) => unit.id === adminUnitId) : units),
     [adminUnitId, role, units],
@@ -59,29 +71,36 @@ function AdminDoctors() {
   const [error, setError] = useState<string | null>(null)
   const [resetting, setResetting] = useState(false)
 
-  const handleAdd = () => {
+  const handleAdd = async () => {
     const trimmed = name.trim()
     if (!trimmed) return
     if (!email.trim()) return
     if (!unitId) return
-    addDoctor({
-      id: `doc-${Date.now()}`,
-      name: trimmed,
-      email: email.trim(),
-      unitId,
-      specialtyId: specialtyId || undefined,
-      phone: phone.trim() || undefined,
-      licenseNumber: licenseNumber.trim() || undefined,
-      canEditPatients,
-      canManageVisits,
-    })
-    setName('')
-    setEmail('')
-    setSpecialtyId(specialties[0]?.id ?? '')
-    setPhone('')
-    setLicenseNumber('')
-    setCanEditPatients(true)
-    setCanManageVisits(true)
+    setMessage(null)
+    setError(null)
+    try {
+      await addDoctor({
+        id: `doc-${Date.now()}`,
+        name: trimmed,
+        email: email.trim(),
+        unitId,
+        specialtyId: specialtyId || undefined,
+        phone: phone.trim() || undefined,
+        licenseNumber: licenseNumber.trim() || undefined,
+        canEditPatients,
+        canManageVisits,
+      })
+      setName('')
+      setEmail('')
+      setSpecialtyId(specialties[0]?.id ?? '')
+      setPhone('')
+      setLicenseNumber('')
+      setCanEditPatients(true)
+      setCanManageVisits(true)
+      showToast('Doctor agregado correctamente.')
+    } catch (err) {
+      setError(getErrorMessage(err, 'No se pudo agregar el doctor'))
+    }
   }
 
   useEffect(() => {
@@ -96,12 +115,26 @@ function AdminDoctors() {
     }
   }, [visibleUnits, unitId])
 
-  const handleEditSave = () => {
+  const handleEditSave = async () => {
     if (!editingDoctor) return
     const trimmed = editingDoctor.name.trim()
     if (!trimmed) return
-    updateDoctor({ ...editingDoctor, name: trimmed })
-    setEditingDoctor(null)
+    const previousEmail = doctors.find((doctor) => doctor.id === editingDoctor.id)?.email?.trim()
+    const nextEmail = editingDoctor.email?.trim()
+    setMessage(null)
+    setError(null)
+    try {
+      await updateDoctor({ ...editingDoctor, name: trimmed, email: nextEmail })
+      setEditingDoctor(null)
+      const emailChanged = Boolean(nextEmail && nextEmail !== previousEmail)
+      const nextMessage = emailChanged
+        ? 'Correo actualizado. El doctor deberá iniciar sesión con el nuevo correo.'
+        : 'Doctor actualizado correctamente.'
+      setMessage(nextMessage)
+      showToast(nextMessage)
+    } catch (err) {
+      setError(getErrorMessage(err, 'No se pudo actualizar el doctor'))
+    }
   }
 
   const handleResetPassword = async () => {

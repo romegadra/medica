@@ -42,8 +42,8 @@ type DataState = {
   removeSpecialtyTemplate: (id: string) => void
   appointments: Appointment[]
   constraints: Constraints
-  addDoctor: (doctor: Doctor) => void
-  updateDoctor: (doctor: Doctor) => void
+  addDoctor: (doctor: Doctor) => Promise<Doctor>
+  updateDoctor: (doctor: Doctor) => Promise<Doctor>
   removeDoctor: (id: string) => void
   addDoctorSchedule: (schedule: DoctorSchedule) => void
   updateDoctorSchedule: (schedule: DoctorSchedule) => void
@@ -278,17 +278,15 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       },
       appointments,
       constraints,
-      addDoctor: (doctor) => {
-        void (async () => {
-          const created = await apiRequest<Doctor>('/doctors', 'POST', doctor)
-          setDoctorList((prev) => [...prev, created])
-        })()
+      addDoctor: async (doctor) => {
+        const created = await apiRequest<Doctor>('/doctors', 'POST', doctor)
+        setDoctorList((prev) => [...prev, created])
+        return created
       },
-      updateDoctor: (doctor) => {
-        void (async () => {
-          const updated = await apiRequest<Doctor>(`/doctors/${doctor.id}`, 'PUT', doctor)
-          setDoctorList((prev) => prev.map((item) => (item.id === updated.id ? updated : item)))
-        })()
+      updateDoctor: async (doctor) => {
+        const updated = await apiRequest<Doctor>(`/doctors/${doctor.id}`, 'PUT', doctor)
+        setDoctorList((prev) => prev.map((item) => (item.id === updated.id ? updated : item)))
+        return updated
       },
       removeDoctor: (id) => {
         void (async () => {

@@ -107,10 +107,10 @@ function DoctorDashboard() {
     <Stack spacing={3}>
       <Box>
         <Typography variant="h4" component="h1" sx={{ fontWeight: 700 }}>
-          Vista del doctor
+          {doctor ? `Agenda de ${doctor.name}` : 'Agenda del doctor'}
         </Typography>
         <Typography variant="body2" color="text.secondary">
-          {doctor ? `Agenda de ${doctor.name}.` : 'Selecciona un doctor desde el login.'}
+          {doctor ? 'Consulta tus citas, pacientes y horarios disponibles.' : 'Selecciona un doctor desde el login.'}
         </Typography>
       </Box>
 
