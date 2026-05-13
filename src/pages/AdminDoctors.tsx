@@ -1,6 +1,7 @@
 import {
   Box,
   Button,
+  Alert,
   FormControlLabel,
   Dialog,
   DialogActions,
@@ -21,7 +22,9 @@ import {
 } from '@mui/material'
 import DeleteIcon from '@mui/icons-material/Delete'
 import EditIcon from '@mui/icons-material/Edit'
+import LockResetIcon from '@mui/icons-material/LockReset'
 import { useEffect, useState } from 'react'
+import { apiRequest } from '../api/client'
 import { useData } from '../data/DataContext'
 import type { Doctor } from '../data/types'
 
@@ -37,6 +40,10 @@ function AdminDoctors() {
   const [unitId, setUnitId] = useState(units[0]?.id ?? '')
   const [editingDoctor, setEditingDoctor] = useState<Doctor | null>(null)
   const [deleteDoctor, setDeleteDoctor] = useState<Doctor | null>(null)
+  const [resetDoctor, setResetDoctor] = useState<Doctor | null>(null)
+  const [message, setMessage] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(null)
+  const [resetting, setResetting] = useState(false)
 
   const handleAdd = () => {
     const trimmed = name.trim()
@@ -83,6 +90,22 @@ function AdminDoctors() {
     setEditingDoctor(null)
   }
 
+  const handleResetPassword = async () => {
+    if (!resetDoctor) return
+    setResetting(true)
+    setMessage(null)
+    setError(null)
+    try {
+      await apiRequest(`/doctors/${resetDoctor.id}/reset-password`, 'POST')
+      setMessage(`Contraseña reiniciada para ${resetDoctor.email}.`)
+      setResetDoctor(null)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'No se pudo reiniciar la contraseña')
+    } finally {
+      setResetting(false)
+    }
+  }
+
   return (
     <Stack spacing={3}>
       <Box>
@@ -96,6 +119,8 @@ function AdminDoctors() {
 
       <Paper sx={{ p: 3 }} elevation={2}>
         <Stack spacing={2}>
+          {message && <Alert severity="success">{message}</Alert>}
+          {error && <Alert severity="error">{error}</Alert>}
           <TextField
             label="Nombre del doctor"
             value={name}
@@ -201,6 +226,14 @@ function AdminDoctors() {
                   <TableCell align="right">
                     <IconButton size="small" onClick={() => setEditingDoctor(doctor)}>
                       <EditIcon fontSize="small" />
+                    </IconButton>
+                    <IconButton
+                      size="small"
+                      onClick={() => setResetDoctor(doctor)}
+                      disabled={!doctor.email}
+                      title="Reiniciar contraseña"
+                    >
+                      <LockResetIcon fontSize="small" />
                     </IconButton>
                     <IconButton size="small" onClick={() => setDeleteDoctor(doctor)}>
                       <DeleteIcon fontSize="small" />
@@ -312,6 +345,23 @@ function AdminDoctors() {
           <Button onClick={() => setEditingDoctor(null)}>Cancelar</Button>
           <Button variant="contained" onClick={handleEditSave} disabled={!editingDoctor?.name.trim()}>
             Guardar
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog open={Boolean(resetDoctor)} onClose={() => setResetDoctor(null)} fullWidth maxWidth="xs">
+        <DialogTitle>¿Reiniciar contraseña?</DialogTitle>
+        <DialogContent>
+          <Typography variant="body2" color="text.secondary">
+            Se asignará la contraseña temporal al doctor y deberá cambiarla al iniciar sesión.
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setResetDoctor(null)} disabled={resetting}>
+            Cancelar
+          </Button>
+          <Button variant="contained" onClick={handleResetPassword} disabled={resetting}>
+            Reiniciar
           </Button>
         </DialogActions>
       </Dialog>

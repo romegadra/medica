@@ -46,6 +46,7 @@ type DataState = {
   removePatient: (id: string) => void
   addAppointment: (appointment: Appointment) => Promise<{ ok: boolean; reason?: string }>
   updateAppointment: (appointment: Appointment) => Promise<{ ok: boolean; reason?: string }>
+  cancelAppointment: (id: string, reason?: string) => Promise<{ ok: boolean; reason?: string }>
   removeAppointment: (id: string) => void
   updateConstraints: (next: Constraints) => void
 }
@@ -279,6 +280,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         if (!constraints.allowOverlap) {
           const conflict = appointments.some(
             (existing) =>
+              existing.status !== 'cancelled' &&
               existing.doctorId === appointment.doctorId && overlaps(existing, appointment),
           )
           if (conflict) {
@@ -302,6 +304,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         if (!constraints.allowOverlap) {
           const conflict = appointments.some(
             (existing) =>
+              existing.status !== 'cancelled' &&
               existing.id !== appointment.id &&
               existing.doctorId === appointment.doctorId &&
               overlaps(existing, appointment),
@@ -324,6 +327,18 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
           if (status === 409) {
             return { ok: false, reason: 'Traslape con una cita existente.' }
           }
+          return { ok: false, reason: message }
+        }
+      },
+      cancelAppointment: async (id, reason) => {
+        try {
+          const updated = await apiRequest<Appointment>(`/appointments/${id}/cancel`, 'POST', {
+            reason,
+          })
+          setAppointments((prev) => prev.map((item) => (item.id === updated.id ? updated : item)))
+          return { ok: true }
+        } catch (err) {
+          const message = err instanceof Error ? err.message : 'Error al cancelar cita'
           return { ok: false, reason: message }
         }
       },

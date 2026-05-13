@@ -37,6 +37,13 @@ import type { Appointment } from '../data/types'
 type CalendarView = 'timeGridWeek' | 'dayGridMonth'
 type DialogMode = 'create' | 'edit'
 
+const paymentTypes = [
+  { value: 'cash', label: 'Efectivo' },
+  { value: 'card', label: 'Tarjeta' },
+  { value: 'transfer', label: 'Transferencia' },
+  { value: 'insurance', label: 'Seguro' },
+]
+
 function addMinutes(iso: string, minutes: number) {
   const next = new Date(iso)
   next.setMinutes(next.getMinutes() + minutes)
@@ -48,8 +55,16 @@ function diffMinutes(startIso: string, endIso: string) {
 }
 
 function ReceptionistDashboard() {
-  const { doctors, patients, appointments, constraints, addAppointment, updateAppointment, addPatient } =
-    useData()
+  const {
+    doctors,
+    patients,
+    appointments,
+    constraints,
+    addAppointment,
+    updateAppointment,
+    cancelAppointment,
+    addPatient,
+  } = useData()
   const { unitId } = useAuth()
   const unitDoctors = useMemo(
     () => (unitId ? doctors.filter((doctor) => doctor.unitId === unitId) : doctors),
@@ -63,8 +78,12 @@ function ReceptionistDashboard() {
   const [patientFilterText, setPatientFilterText] = useState('')
   const [durationMinutes, setDurationMinutes] = useState(constraints.slotMinutes)
   const [appointmentStart, setAppointmentStart] = useState('')
+  const [notes, setNotes] = useState('')
+  const [paymentType, setPaymentType] = useState('')
   const [mode, setMode] = useState<DialogMode>('create')
   const [editingId, setEditingId] = useState<string | null>(null)
+  const [cancelDialogOpen, setCancelDialogOpen] = useState(false)
+  const [cancelReason, setCancelReason] = useState('')
   const [addingPatient, setAddingPatient] = useState(false)
   const [newPatientName, setNewPatientName] = useState('')
   const [newPatientPhone, setNewPatientPhone] = useState('')
@@ -91,7 +110,9 @@ function ReceptionistDashboard() {
   )
 
   const events = useMemo(() => {
-    const filtered = appointments.filter((appointment) => appointment.doctorId === doctorId)
+    const filtered = appointments.filter(
+      (appointment) => appointment.doctorId === doctorId && appointment.status !== 'cancelled',
+    )
     const byPatientId =
       patientFilterId === 'all'
         ? filtered
@@ -126,6 +147,8 @@ function ReceptionistDashboard() {
     setNewPatientPhone('')
     setAppointmentStart(info.startStr)
     setDurationMinutes(diffMinutes(info.startStr, info.endStr) || constraints.slotMinutes)
+    setNotes('')
+    setPaymentType('')
     setMode('create')
     setEditingId(null)
     setError(null)
@@ -170,6 +193,9 @@ function ReceptionistDashboard() {
       title: patientName,
       start: appointmentStart,
       end,
+      status: 'scheduled',
+      notes: notes.trim() || undefined,
+      paymentType: paymentType || undefined,
     }
 
     const result =
@@ -182,6 +208,20 @@ function ReceptionistDashboard() {
     }
 
     setDialogOpen(false)
+    setError(null)
+  }
+
+  const handleCancelAppointment = async () => {
+    if (!editingId) return
+    const result = await cancelAppointment(editingId, cancelReason.trim() || undefined)
+    if (!result.ok) {
+      setError(result.reason ?? 'No se pudo cancelar la cita.')
+      return
+    }
+    setCancelDialogOpen(false)
+    setDialogOpen(false)
+    setCancelReason('')
+    setEditingId(null)
     setError(null)
   }
 
@@ -226,6 +266,9 @@ function ReceptionistDashboard() {
             </Typography>
             <Button component={Link} to="/reception/patients" variant="outlined" size="small">
               Agregar pacientes
+            </Button>
+            <Button component={Link} to="/reception/cancelled-appointments" variant="outlined" size="small">
+              Citas canceladas
             </Button>
           </Stack>
           <Stack direction={{ xs: 'column', md: 'row' }} spacing={2} alignItems="center">
@@ -338,6 +381,8 @@ function ReceptionistDashboard() {
             setPatientId(appointment.patientId)
             setAppointmentStart(appointment.start)
             setDurationMinutes(diffMinutes(appointment.start, appointment.end) || constraints.slotMinutes)
+            setNotes(appointment.notes ?? '')
+            setPaymentType(appointment.paymentType ?? '')
             setAddingPatient(false)
             setNewPatientName('')
             setNewPatientPhone('')
@@ -368,6 +413,10 @@ function ReceptionistDashboard() {
           setAddingPatient(false)
           setNewPatientName('')
           setNewPatientPhone('')
+          setNotes('')
+          setPaymentType('')
+          setCancelDialogOpen(false)
+          setCancelReason('')
           setError(null)
         }}
         maxWidth="xs"
@@ -434,12 +483,65 @@ function ReceptionistDashboard() {
               value={appointmentStart ? addMinutes(appointmentStart, durationMinutes) : ''}
               disabled
             />
+            <TextField
+              label="Tipo de pago"
+              select
+              value={paymentType}
+              onChange={(event) => setPaymentType(event.target.value)}
+            >
+              <MenuItem value="">Sin definir</MenuItem>
+              {paymentTypes.map((item) => (
+                <MenuItem key={item.value} value={item.value}>
+                  {item.label}
+                </MenuItem>
+              ))}
+            </TextField>
+            <TextField
+              label="Notas"
+              value={notes}
+              onChange={(event) => setNotes(event.target.value)}
+              multiline
+              minRows={3}
+            />
           </Stack>
         </DialogContent>
         <DialogActions>
+          {mode === 'edit' && (
+            <Button color="error" onClick={() => setCancelDialogOpen(true)}>
+              Cancelar cita
+            </Button>
+          )}
           <Button onClick={() => setDialogOpen(false)}>Cancelar</Button>
-          <Button variant="contained" onClick={handleSave} disabled={!patientId}>
+          <Button
+            variant="contained"
+            onClick={handleSave}
+            disabled={addingPatient ? !newPatientName.trim() : !patientId}
+          >
             {mode === 'edit' ? 'Actualizar' : 'Guardar'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog open={cancelDialogOpen} onClose={() => setCancelDialogOpen(false)} maxWidth="xs" fullWidth>
+        <DialogTitle>Cancelar cita</DialogTitle>
+        <DialogContent>
+          <Stack spacing={2} sx={{ mt: 1 }}>
+            <Typography variant="body2" color="text.secondary">
+              La cita saldrá de la agenda activa y quedará disponible en el listado de canceladas.
+            </Typography>
+            <TextField
+              label="Motivo de cancelación"
+              value={cancelReason}
+              onChange={(event) => setCancelReason(event.target.value)}
+              multiline
+              minRows={3}
+            />
+          </Stack>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setCancelDialogOpen(false)}>Volver</Button>
+          <Button color="error" variant="contained" onClick={handleCancelAppointment}>
+            Cancelar cita
           </Button>
         </DialogActions>
       </Dialog>

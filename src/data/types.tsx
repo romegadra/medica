@@ -73,6 +73,11 @@ export type Appointment = {
   title: string
   start: string
   end: string
+  status?: 'scheduled' | 'cancelled'
+  notes?: string
+  paymentType?: string
+  cancellationReason?: string
+  cancelledAt?: string
 }
 
 export type Constraints = {

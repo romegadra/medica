@@ -71,6 +71,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             token: string
             role: Role
             doctorId?: string | null
+            receptionistId?: string | null
             unitId?: string | null
             mustChangePassword?: boolean
           }>('/auth/login', 'POST', { email, password })
@@ -86,7 +87,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           } else {
             window.localStorage.removeItem(storageUnitKey)
           }
-          window.localStorage.removeItem(storageReceptionistKey)
+          if (response.receptionistId) {
+            window.localStorage.setItem(storageReceptionistKey, response.receptionistId)
+          } else {
+            window.localStorage.removeItem(storageReceptionistKey)
+          }
           if (response.mustChangePassword) {
             window.localStorage.setItem(storageMustChangeKey, 'true')
           } else {
@@ -95,7 +100,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setRole(response.role)
           setDoctorId(response.doctorId ?? null)
           setUnitId(response.unitId ?? null)
-          setReceptionistId(null)
+          setReceptionistId(response.receptionistId ?? null)
           setToken(response.token)
           setMustChangePassword(Boolean(response.mustChangePassword))
           return { ok: true }

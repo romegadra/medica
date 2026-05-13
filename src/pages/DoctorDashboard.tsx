@@ -39,7 +39,10 @@ function DoctorDashboard() {
   const events = useMemo(
     () =>
       appointments
-        .filter((appointment) => appointment.doctorId === doctorId)
+        .filter(
+          (appointment) =>
+            appointment.doctorId === doctorId && appointment.status !== 'cancelled',
+        )
         .map((appointment) => ({
           id: appointment.id,
           title: appointment.title,

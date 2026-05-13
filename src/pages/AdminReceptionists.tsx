@@ -1,4 +1,5 @@
 import {
+  Alert,
   Box,
   Button,
   Dialog,
@@ -19,7 +20,9 @@ import {
 } from '@mui/material'
 import DeleteIcon from '@mui/icons-material/Delete'
 import EditIcon from '@mui/icons-material/Edit'
+import LockResetIcon from '@mui/icons-material/LockReset'
 import { useEffect, useState } from 'react'
+import { apiRequest } from '../api/client'
 import { useData } from '../data/DataContext'
 import type { Receptionist } from '../data/types'
 
@@ -32,6 +35,10 @@ function AdminReceptionists() {
   const [unitId, setUnitId] = useState(units[0]?.id ?? '')
   const [editingReceptionist, setEditingReceptionist] = useState<Receptionist | null>(null)
   const [deleteReceptionist, setDeleteReceptionist] = useState<Receptionist | null>(null)
+  const [resetReceptionist, setResetReceptionist] = useState<Receptionist | null>(null)
+  const [message, setMessage] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(null)
+  const [resetting, setResetting] = useState(false)
 
   const handleAdd = () => {
     const trimmed = name.trim()
@@ -64,6 +71,22 @@ function AdminReceptionists() {
     setEditingReceptionist(null)
   }
 
+  const handleResetPassword = async () => {
+    if (!resetReceptionist) return
+    setResetting(true)
+    setMessage(null)
+    setError(null)
+    try {
+      await apiRequest(`/receptionists/${resetReceptionist.id}/reset-password`, 'POST')
+      setMessage(`Contraseña reiniciada para ${resetReceptionist.email}.`)
+      setResetReceptionist(null)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'No se pudo reiniciar la contraseña')
+    } finally {
+      setResetting(false)
+    }
+  }
+
   return (
     <Stack spacing={3}>
       <Box>
@@ -77,6 +100,8 @@ function AdminReceptionists() {
 
       <Paper sx={{ p: 3 }} elevation={2}>
         <Stack spacing={2}>
+          {message && <Alert severity="success">{message}</Alert>}
+          {error && <Alert severity="error">{error}</Alert>}
           <TextField
             label="Nombre"
             value={name}
@@ -144,6 +169,14 @@ function AdminReceptionists() {
                   <TableCell align="right">
                     <IconButton size="small" onClick={() => setEditingReceptionist(receptionist)}>
                       <EditIcon fontSize="small" />
+                    </IconButton>
+                    <IconButton
+                      size="small"
+                      onClick={() => setResetReceptionist(receptionist)}
+                      disabled={!receptionist.email}
+                      title="Reiniciar contraseña"
+                    >
+                      <LockResetIcon fontSize="small" />
                     </IconButton>
                     <IconButton size="small" onClick={() => setDeleteReceptionist(receptionist)}>
                       <DeleteIcon fontSize="small" />
@@ -218,6 +251,28 @@ function AdminReceptionists() {
           <Button onClick={() => setEditingReceptionist(null)}>Cancelar</Button>
           <Button variant="contained" onClick={handleEditSave} disabled={!editingReceptionist?.name.trim()}>
             Guardar
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog
+        open={Boolean(resetReceptionist)}
+        onClose={() => setResetReceptionist(null)}
+        fullWidth
+        maxWidth="xs"
+      >
+        <DialogTitle>¿Reiniciar contraseña?</DialogTitle>
+        <DialogContent>
+          <Typography variant="body2" color="text.secondary">
+            Se asignará la contraseña temporal a la recepcionista y deberá cambiarla al iniciar sesión.
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setResetReceptionist(null)} disabled={resetting}>
+            Cancelar
+          </Button>
+          <Button variant="contained" onClick={handleResetPassword} disabled={resetting}>
+            Reiniciar
           </Button>
         </DialogActions>
       </Dialog>
