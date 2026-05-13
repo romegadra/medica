@@ -98,6 +98,9 @@ function AdminDashboard() {
           <Button component={Link} to="/admin/doctors" variant="outlined">
             Administrar doctores
           </Button>
+          <Button component={Link} to="/admin/doctor-schedules" variant="outlined">
+            Administrar horarios
+          </Button>
         </Stack>
       </Paper>
 

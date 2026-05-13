@@ -44,6 +44,28 @@ const paymentTypes = [
   { value: 'insurance', label: 'Seguro' },
 ]
 
+function timeToMinutes(value: string) {
+  const [hour, minute] = value.split(':').map(Number)
+  return hour * 60 + minute
+}
+
+function isWithinSchedule(
+  start: Date,
+  end: Date,
+  schedules: { dayOfWeek: number; startTime: string; endTime: string }[],
+) {
+  if (schedules.length === 0) return true
+  if (start.getDay() !== end.getDay()) return false
+  const startMinutes = start.getHours() * 60 + start.getMinutes()
+  const endMinutes = end.getHours() * 60 + end.getMinutes()
+  return schedules.some(
+    (schedule) =>
+      schedule.dayOfWeek === start.getDay() &&
+      startMinutes >= timeToMinutes(schedule.startTime) &&
+      endMinutes <= timeToMinutes(schedule.endTime),
+  )
+}
+
 function addMinutes(iso: string, minutes: number) {
   const next = new Date(iso)
   next.setMinutes(next.getMinutes() + minutes)
@@ -57,6 +79,7 @@ function diffMinutes(startIso: string, endIso: string) {
 function ReceptionistDashboard() {
   const {
     doctors,
+    doctorSchedules,
     patients,
     appointments,
     constraints,
@@ -107,6 +130,25 @@ function ReceptionistDashboard() {
   const doctorPatients = useMemo(
     () => patients.filter((patient) => patient.doctorId === doctorId),
     [patients, doctorId],
+  )
+  const selectedDoctorSchedules = useMemo(
+    () => doctorSchedules.filter((schedule) => schedule.doctorId === doctorId),
+    [doctorSchedules, doctorId],
+  )
+  const businessHours = useMemo(
+    () =>
+      selectedDoctorSchedules.length > 0
+        ? selectedDoctorSchedules.map((schedule) => ({
+            daysOfWeek: [schedule.dayOfWeek],
+            startTime: schedule.startTime,
+            endTime: schedule.endTime,
+          }))
+        : {
+            daysOfWeek: [0, 1, 2, 3, 4, 5, 6],
+            startTime: `${constraints.startHour.toString().padStart(2, '0')}:00`,
+            endTime: `${constraints.endHour.toString().padStart(2, '0')}:00`,
+          },
+    [selectedDoctorSchedules, constraints.endHour, constraints.startHour],
   )
 
   const events = useMemo(() => {
@@ -186,6 +228,11 @@ function ReceptionistDashboard() {
     }
 
     const end = addMinutes(appointmentStart, durationMinutes)
+    if (!isWithinSchedule(new Date(appointmentStart), new Date(end), selectedDoctorSchedules)) {
+      setError('La cita esta fuera del horario disponible del doctor.')
+      return
+    }
+
     const appointment: Appointment = {
       id: mode === 'edit' && editingId ? editingId : `apt-${Date.now()}`,
       doctorId,
@@ -352,6 +399,17 @@ function ReceptionistDashboard() {
           eventDrop={async (info) => {
             const appointment = appointments.find((item) => item.id === info.event.id)
             if (!appointment) return
+            if (
+              !isWithinSchedule(
+                info.event.start ?? new Date(appointment.start),
+                info.event.end ?? new Date(appointment.end),
+                selectedDoctorSchedules,
+              )
+            ) {
+              setError('La cita esta fuera del horario disponible del doctor.')
+              info.revert()
+              return
+            }
             const result = await updateAppointment({
               ...appointment,
               start: info.event.start?.toISOString() ?? appointment.start,
@@ -365,6 +423,17 @@ function ReceptionistDashboard() {
           eventResize={async (info) => {
             const appointment = appointments.find((item) => item.id === info.event.id)
             if (!appointment) return
+            if (
+              !isWithinSchedule(
+                info.event.start ?? new Date(appointment.start),
+                info.event.end ?? new Date(appointment.end),
+                selectedDoctorSchedules,
+              )
+            ) {
+              setError('La cita esta fuera del horario disponible del doctor.')
+              info.revert()
+              return
+            }
             const result = await updateAppointment({
               ...appointment,
               start: info.event.start?.toISOString() ?? appointment.start,
@@ -394,12 +463,12 @@ function ReceptionistDashboard() {
           slotMinTime={`${constraints.startHour.toString().padStart(2, '0')}:00:00`}
           slotMaxTime={`${constraints.endHour.toString().padStart(2, '0')}:00:00`}
           slotDuration={`00:${constraints.slotMinutes.toString().padStart(2, '0')}:00`}
-          businessHours={{
-            daysOfWeek: [0, 1, 2, 3, 4, 5, 6],
-            startTime: `${constraints.startHour.toString().padStart(2, '0')}:00`,
-            endTime: `${constraints.endHour.toString().padStart(2, '0')}:00`,
-          }}
+          businessHours={businessHours}
           selectConstraint="businessHours"
+          selectAllow={(info) => isWithinSchedule(info.start, info.end, selectedDoctorSchedules)}
+          eventAllow={(dropInfo) =>
+            isWithinSchedule(dropInfo.start, dropInfo.end, selectedDoctorSchedules)
+          }
           eventOverlap={constraints.allowOverlap}
           selectOverlap={constraints.allowOverlap}
         />

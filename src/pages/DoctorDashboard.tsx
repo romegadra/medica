@@ -19,7 +19,7 @@ type CalendarView = 'timeGridWeek' | 'dayGridMonth'
 
 function DoctorDashboard() {
   const { doctorId } = useAuth()
-  const { doctors, patients, appointments, constraints } = useData()
+  const { doctors, doctorSchedules, patients, appointments, constraints } = useData()
   const [view, setView] = useState<CalendarView>('timeGridWeek')
   const calendarRef = useRef<FullCalendar | null>(null)
   const [calendarTitle, setCalendarTitle] = useState('')
@@ -34,6 +34,25 @@ function DoctorDashboard() {
   const doctorPatients = useMemo(
     () => patients.filter((patient) => patient.doctorId === doctorId),
     [patients, doctorId],
+  )
+  const selectedDoctorSchedules = useMemo(
+    () => doctorSchedules.filter((schedule) => schedule.doctorId === doctorId),
+    [doctorSchedules, doctorId],
+  )
+  const businessHours = useMemo(
+    () =>
+      selectedDoctorSchedules.length > 0
+        ? selectedDoctorSchedules.map((schedule) => ({
+            daysOfWeek: [schedule.dayOfWeek],
+            startTime: schedule.startTime,
+            endTime: schedule.endTime,
+          }))
+        : {
+            daysOfWeek: [0, 1, 2, 3, 4, 5, 6],
+            startTime: `${constraints.startHour.toString().padStart(2, '0')}:00`,
+            endTime: `${constraints.endHour.toString().padStart(2, '0')}:00`,
+          },
+    [constraints.endHour, constraints.startHour, selectedDoctorSchedules],
   )
 
   const events = useMemo(
@@ -87,6 +106,9 @@ function DoctorDashboard() {
               Consultas
             </Button>
           )}
+          <Button component={Link} to="/doctor/schedules" variant="outlined" size="small">
+            Mi horario
+          </Button>
         </Stack>
       </Paper>
 
@@ -133,6 +155,7 @@ function DoctorDashboard() {
           slotMinTime={`${constraints.startHour.toString().padStart(2, '0')}:00:00`}
           slotMaxTime={`${constraints.endHour.toString().padStart(2, '0')}:00:00`}
           slotDuration={`00:${constraints.slotMinutes.toString().padStart(2, '0')}:00`}
+          businessHours={businessHours}
         />
       </Paper>
 

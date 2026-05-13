@@ -80,6 +80,14 @@ export type Appointment = {
   cancelledAt?: string
 }
 
+export type DoctorSchedule = {
+  id: string
+  doctorId: string
+  dayOfWeek: number
+  startTime: string
+  endTime: string
+}
+
 export type Constraints = {
   startHour: number
   endHour: number

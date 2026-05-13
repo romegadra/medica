@@ -4,12 +4,14 @@ import { useAuth } from './auth/AuthContext'
 import ProtectedRoute from './components/ProtectedRoute'
 import AdminDashboard from './pages/AdminDashboard'
 import AdminDoctors from './pages/AdminDoctors'
+import AdminDoctorSchedules from './pages/AdminDoctorSchedules'
 import AdminUnits from './pages/AdminUnits'
 import AdminReceptionists from './pages/AdminReceptionists'
 import AdminTemplates from './pages/AdminTemplates'
 import AdminSpecialties from './pages/AdminSpecialties'
 import DoctorDashboard from './pages/DoctorDashboard'
 import DoctorPatients from './pages/DoctorPatients'
+import DoctorSchedules from './pages/DoctorSchedules'
 import DoctorVisits from './pages/DoctorVisits'
 import ChangePassword from './pages/ChangePassword'
 import Login from './pages/Login'
@@ -82,6 +84,14 @@ function App() {
             }
           />
           <Route
+            path="/admin/doctor-schedules"
+            element={
+              <ProtectedRoute allowed={['admin']}>
+                <AdminDoctorSchedules />
+              </ProtectedRoute>
+            }
+          />
+          <Route
             path="/admin/units"
             element={
               <ProtectedRoute allowed={['admin']}>
@@ -142,6 +152,14 @@ function App() {
             element={
               <ProtectedRoute allowed={['doctor']}>
                 <DoctorVisits />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/doctor/schedules"
+            element={
+              <ProtectedRoute allowed={['doctor']}>
+                <DoctorSchedules />
               </ProtectedRoute>
             }
           />
