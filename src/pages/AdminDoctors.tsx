@@ -23,13 +23,27 @@ import {
 import DeleteIcon from '@mui/icons-material/Delete'
 import EditIcon from '@mui/icons-material/Edit'
 import LockResetIcon from '@mui/icons-material/LockReset'
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { apiRequest } from '../api/client'
+import { useAuth } from '../auth/AuthContext'
+import DoctorScheduleManager from '../components/DoctorScheduleManager'
 import { useData } from '../data/DataContext'
 import type { Doctor } from '../data/types'
 
 function AdminDoctors() {
   const { doctors, addDoctor, updateDoctor, removeDoctor, units, specialties } = useData()
+  const { role, unitId: adminUnitId } = useAuth()
+  const visibleUnits = useMemo(
+    () => (role === 'admin' && adminUnitId ? units.filter((unit) => unit.id === adminUnitId) : units),
+    [adminUnitId, role, units],
+  )
+  const visibleDoctors = useMemo(
+    () =>
+      role === 'admin' && adminUnitId
+        ? doctors.filter((doctor) => doctor.unitId === adminUnitId)
+        : doctors,
+    [adminUnitId, doctors, role],
+  )
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [specialtyId, setSpecialtyId] = useState(specialties[0]?.id ?? '')
@@ -37,7 +51,7 @@ function AdminDoctors() {
   const [licenseNumber, setLicenseNumber] = useState('')
   const [canEditPatients, setCanEditPatients] = useState(true)
   const [canManageVisits, setCanManageVisits] = useState(true)
-  const [unitId, setUnitId] = useState(units[0]?.id ?? '')
+  const [unitId, setUnitId] = useState(visibleUnits[0]?.id ?? '')
   const [editingDoctor, setEditingDoctor] = useState<Doctor | null>(null)
   const [deleteDoctor, setDeleteDoctor] = useState<Doctor | null>(null)
   const [resetDoctor, setResetDoctor] = useState<Doctor | null>(null)
@@ -78,9 +92,9 @@ function AdminDoctors() {
 
   useEffect(() => {
     if (!unitId && units.length > 0) {
-      setUnitId(units[0].id)
+      setUnitId(visibleUnits[0].id)
     }
-  }, [units, unitId])
+  }, [visibleUnits, unitId])
 
   const handleEditSave = () => {
     if (!editingDoctor) return
@@ -178,7 +192,7 @@ function AdminDoctors() {
             value={unitId}
             onChange={(event) => setUnitId(event.target.value)}
           >
-            {units.map((unit) => (
+            {visibleUnits.map((unit) => (
               <MenuItem key={unit.id} value={unit.id}>
                 {unit.name}
               </MenuItem>
@@ -211,7 +225,7 @@ function AdminDoctors() {
               </TableRow>
             </TableHead>
             <TableBody>
-              {doctors.map((doctor) => (
+              {visibleDoctors.map((doctor) => (
                 <TableRow key={doctor.id}>
                   <TableCell>{doctor.name}</TableCell>
                   <TableCell>{doctor.email ?? '-'}</TableCell>
@@ -222,7 +236,7 @@ function AdminDoctors() {
                   <TableCell>{doctor.licenseNumber ?? '-'}</TableCell>
                   <TableCell>{doctor.canEditPatients ? 'Si' : 'No'}</TableCell>
                   <TableCell>{doctor.canManageVisits ? 'Si' : 'No'}</TableCell>
-                  <TableCell>{units.find((unit) => unit.id === doctor.unitId)?.name ?? 'Unidad'}</TableCell>
+                  <TableCell>{visibleUnits.find((unit) => unit.id === doctor.unitId)?.name ?? 'Unidad'}</TableCell>
                   <TableCell align="right">
                     <IconButton size="small" onClick={() => setEditingDoctor(doctor)}>
                       <EditIcon fontSize="small" />
@@ -246,7 +260,7 @@ function AdminDoctors() {
         </Stack>
       </Paper>
 
-      <Dialog open={Boolean(editingDoctor)} onClose={() => setEditingDoctor(null)} fullWidth maxWidth="xs">
+      <Dialog open={Boolean(editingDoctor)} onClose={() => setEditingDoctor(null)} fullWidth maxWidth="md">
         <DialogTitle>Editar doctor</DialogTitle>
         <DialogContent>
           <Stack spacing={2} sx={{ mt: 1 }}>
@@ -333,12 +347,15 @@ function AdminDoctors() {
                 setEditingDoctor((prev) => (prev ? { ...prev, unitId: event.target.value } : prev))
               }
             >
-              {units.map((unit) => (
+              {visibleUnits.map((unit) => (
                 <MenuItem key={unit.id} value={unit.id}>
                   {unit.name}
                 </MenuItem>
               ))}
             </TextField>
+            {editingDoctor && (
+              <DoctorScheduleManager doctorId={editingDoctor.id} />
+            )}
           </Stack>
         </DialogContent>
         <DialogActions>

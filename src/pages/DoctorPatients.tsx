@@ -18,14 +18,16 @@ import {
 } from '@mui/material'
 import DeleteIcon from '@mui/icons-material/Delete'
 import EditIcon from '@mui/icons-material/Edit'
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useAuth } from '../auth/AuthContext'
 import { useData } from '../data/DataContext'
 import type { Patient } from '../data/types'
+import { useToast } from '../components/ToastProvider'
 
 function DoctorPatients() {
   const { doctorId } = useAuth()
-  const { doctors, patients, addPatient, updatePatient, removePatient } = useData()
+  const { doctors, patients, addPatient, updatePatient, removePatient, loadPatientsForDoctor } = useData()
+  const { showToast } = useToast()
   const doctor = doctors.find((item) => item.id === doctorId)
   const canEditPatients = doctor?.canEditPatients ?? true
   const [name, setName] = useState('')
@@ -40,10 +42,16 @@ function DoctorPatients() {
     [patients, doctorId],
   )
 
-  const handleAdd = () => {
+  useEffect(() => {
+    if (doctorId) {
+      void loadPatientsForDoctor(doctorId)
+    }
+  }, [doctorId, loadPatientsForDoctor])
+
+  const handleAdd = async () => {
     const trimmed = name.trim()
     if (!trimmed || !doctorId) return
-    addPatient({
+    await addPatient({
       id: `pat-${Date.now()}`,
       doctorId,
       name: trimmed,
@@ -51,17 +59,18 @@ function DoctorPatients() {
       address: address.trim() || undefined,
       historyDate: historyDate || undefined,
     })
+    showToast('Paciente agregado correctamente.')
     setName('')
     setPhone('')
     setAddress('')
     setHistoryDate('')
   }
 
-  const handleEditSave = () => {
+  const handleEditSave = async () => {
     if (!editingPatient) return
     const trimmed = editingPatient.name.trim()
     if (!trimmed) return
-    updatePatient({
+    await updatePatient({
       ...editingPatient,
       name: trimmed,
       phone: editingPatient.phone?.trim() || undefined,
@@ -69,6 +78,7 @@ function DoctorPatients() {
       historyDate: editingPatient.historyDate || undefined,
     })
     setEditingPatient(null)
+    showToast('Paciente actualizado correctamente.')
   }
 
   return (

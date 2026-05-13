@@ -1,17 +1,24 @@
 import { Box, MenuItem, Stack, TextField, Typography } from '@mui/material'
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
+import { useAuth } from '../auth/AuthContext'
 import DoctorScheduleManager from '../components/DoctorScheduleManager'
 import { useData } from '../data/DataContext'
 
 function AdminDoctorSchedules() {
   const { doctors } = useData()
-  const [doctorId, setDoctorId] = useState(doctors[0]?.id ?? '')
+  const { role, unitId } = useAuth()
+  const visibleDoctors = useMemo(
+    () =>
+      role === 'admin' && unitId ? doctors.filter((doctor) => doctor.unitId === unitId) : doctors,
+    [doctors, role, unitId],
+  )
+  const [doctorId, setDoctorId] = useState(visibleDoctors[0]?.id ?? '')
 
   useEffect(() => {
-    if (!doctorId && doctors.length > 0) {
-      setDoctorId(doctors[0].id)
+    if (!doctorId && visibleDoctors.length > 0) {
+      setDoctorId(visibleDoctors[0].id)
     }
-  }, [doctorId, doctors])
+  }, [doctorId, visibleDoctors])
 
   return (
     <Stack spacing={3}>
@@ -31,7 +38,7 @@ function AdminDoctorSchedules() {
         onChange={(event) => setDoctorId(event.target.value)}
         sx={{ maxWidth: 360 }}
       >
-        {doctors.map((doctor) => (
+        {visibleDoctors.map((doctor) => (
           <MenuItem key={doctor.id} value={doctor.id}>
             {doctor.name}
           </MenuItem>

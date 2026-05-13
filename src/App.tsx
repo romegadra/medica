@@ -5,12 +5,14 @@ import ProtectedRoute from './components/ProtectedRoute'
 import AdminDashboard from './pages/AdminDashboard'
 import AdminDoctors from './pages/AdminDoctors'
 import AdminDoctorSchedules from './pages/AdminDoctorSchedules'
+import AdminUsers from './pages/AdminUsers'
 import AdminUnits from './pages/AdminUnits'
 import AdminReceptionists from './pages/AdminReceptionists'
 import AdminTemplates from './pages/AdminTemplates'
 import AdminSpecialties from './pages/AdminSpecialties'
 import DoctorDashboard from './pages/DoctorDashboard'
 import DoctorPatients from './pages/DoctorPatients'
+import DoctorReports from './pages/DoctorReports'
 import DoctorSchedules from './pages/DoctorSchedules'
 import DoctorVisits from './pages/DoctorVisits'
 import ChangePassword from './pages/ChangePassword'
@@ -27,21 +29,37 @@ function App() {
 
   return (
     <Box sx={{ minHeight: '100vh', bgcolor: 'background.default' }}>
-      <AppBar position="static" color="transparent" elevation={0} sx={{ pt: 1 }}>
-        <Toolbar sx={{ alignItems: 'center', minHeight: 64, position: 'relative', justifyContent: 'center' }}>
+      <AppBar position="static" color="transparent" elevation={0} sx={{ pt: { xs: 0.5, md: 1 } }}>
+        <Toolbar
+          sx={{
+            alignItems: 'center',
+            minHeight: { xs: 84, md: 64 },
+            position: 'relative',
+            justifyContent: 'center',
+            flexDirection: { xs: 'column', md: 'row' },
+            gap: { xs: 1, md: 0 },
+          }}
+        >
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-            <Box component="img" src={logo} alt="Medflow" sx={{ height: 80 }} />
-            <Typography variant="h6" sx={{ fontWeight: 600 }}>
+            <Box component="img" src={logo} alt="Medflow" sx={{ height: { xs: 48, md: 80 } }} />
+            <Typography variant="h6" sx={{ fontWeight: 600, fontSize: { xs: '1rem', md: '1.25rem' } }}>
               Agenda Médica
             </Typography>
           </Box>
           {role && (
-            <Box sx={{ position: 'absolute', right: 0, display: 'flex', gap: 1 }}>
+            <Box
+              sx={{
+                position: { xs: 'static', md: 'absolute' },
+                right: { md: 0 },
+                display: 'flex',
+                gap: 1,
+              }}
+            >
               <Button
                 component={Link}
-                to={role === 'admin' ? '/admin' : role === 'receptionist' ? '/reception' : '/doctor'}
+                to={role === 'admin' || role === 'superadmin' ? '/admin' : role === 'receptionist' ? '/reception' : '/doctor'}
               >
-                {role === 'admin' ? 'Admin' : role === 'receptionist' ? 'Recepción' : 'Doctor'}
+                {role === 'admin' || role === 'superadmin' ? 'Admin' : role === 'receptionist' ? 'Recepción' : 'Doctor'}
               </Button>
               <Button onClick={logout} color="inherit">
                 Salir
@@ -62,7 +80,7 @@ function App() {
           <Route
             path="/change-password"
             element={
-              <ProtectedRoute allowed={['admin', 'receptionist', 'doctor']}>
+              <ProtectedRoute allowed={['superadmin', 'admin', 'receptionist', 'doctor']}>
                 <ChangePassword />
               </ProtectedRoute>
             }
@@ -70,15 +88,23 @@ function App() {
           <Route
             path="/admin"
             element={
-              <ProtectedRoute allowed={['admin']}>
+              <ProtectedRoute allowed={['admin', 'superadmin']}>
                 <AdminDashboard />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/users"
+            element={
+              <ProtectedRoute allowed={['admin', 'superadmin']}>
+                <AdminUsers />
               </ProtectedRoute>
             }
           />
           <Route
             path="/admin/doctors"
             element={
-              <ProtectedRoute allowed={['admin']}>
+              <ProtectedRoute allowed={['admin', 'superadmin']}>
                 <AdminDoctors />
               </ProtectedRoute>
             }
@@ -86,7 +112,7 @@ function App() {
           <Route
             path="/admin/doctor-schedules"
             element={
-              <ProtectedRoute allowed={['admin']}>
+              <ProtectedRoute allowed={['admin', 'superadmin']}>
                 <AdminDoctorSchedules />
               </ProtectedRoute>
             }
@@ -94,7 +120,7 @@ function App() {
           <Route
             path="/admin/units"
             element={
-              <ProtectedRoute allowed={['admin']}>
+              <ProtectedRoute allowed={['admin', 'superadmin']}>
                 <AdminUnits />
               </ProtectedRoute>
             }
@@ -102,7 +128,7 @@ function App() {
           <Route
             path="/admin/receptionists"
             element={
-              <ProtectedRoute allowed={['admin']}>
+              <ProtectedRoute allowed={['admin', 'superadmin']}>
                 <AdminReceptionists />
               </ProtectedRoute>
             }
@@ -110,7 +136,7 @@ function App() {
           <Route
             path="/admin/templates"
             element={
-              <ProtectedRoute allowed={['admin']}>
+              <ProtectedRoute allowed={['admin', 'superadmin']}>
                 <AdminTemplates />
               </ProtectedRoute>
             }
@@ -118,7 +144,7 @@ function App() {
           <Route
             path="/admin/specialties"
             element={
-              <ProtectedRoute allowed={['admin']}>
+              <ProtectedRoute allowed={['admin', 'superadmin']}>
                 <AdminSpecialties />
               </ProtectedRoute>
             }
@@ -164,6 +190,14 @@ function App() {
             }
           />
           <Route
+            path="/doctor/reports"
+            element={
+              <ProtectedRoute allowed={['doctor']}>
+                <DoctorReports />
+              </ProtectedRoute>
+            }
+          />
+          <Route
             path="/reception/patients"
             element={
               <ProtectedRoute allowed={['receptionist']}>
@@ -187,7 +221,7 @@ function App() {
                   to={
                     mustChangePassword
                       ? '/change-password'
-                      : role === 'admin'
+                      : role === 'admin' || role === 'superadmin'
                         ? '/admin'
                         : role === 'receptionist'
                           ? '/reception'

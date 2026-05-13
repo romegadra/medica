@@ -22,7 +22,8 @@ import { useData } from '../data/DataContext'
 
 function DoctorVisits() {
   const { doctorId } = useAuth()
-  const { doctors, patients, specialtyTemplates, visits, addVisit, specialties } = useData()
+  const { doctors, patients, specialtyTemplates, visits, addVisit, specialties, loadPatientsForDoctor } =
+    useData()
   const doctor = doctors.find((item) => item.id === doctorId)
   const template = specialtyTemplates.find((item) => item.specialtyId === doctor?.specialtyId)
   const canManageVisits = doctor?.canManageVisits ?? true
@@ -40,6 +41,12 @@ function DoctorVisits() {
   const [visitDate, setVisitDate] = useState(new Date().toISOString().slice(0, 10))
   const [responses, setResponses] = useState<Record<string, string>>({})
   const [selectedVisit, setSelectedVisit] = useState<(typeof visits)[number] | null>(null)
+
+  useEffect(() => {
+    if (doctorId) {
+      void loadPatientsForDoctor(doctorId)
+    }
+  }, [doctorId, loadPatientsForDoctor])
 
   useEffect(() => {
     setPatientId(doctorPatients[0]?.id ?? '')

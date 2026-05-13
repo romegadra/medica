@@ -23,10 +23,12 @@ import { useEffect, useMemo, useState } from 'react'
 import { useData } from '../data/DataContext'
 import { useAuth } from '../auth/AuthContext'
 import type { Patient } from '../data/types'
+import { useToast } from '../components/ToastProvider'
 
 function ReceptionistPatients() {
-  const { doctors, patients, addPatient, updatePatient, removePatient } = useData()
+  const { doctors, patients, addPatient, updatePatient, removePatient, loadPatientsForDoctor } = useData()
   const { unitId } = useAuth()
+  const { showToast } = useToast()
   const unitDoctors = useMemo(
     () => (unitId ? doctors.filter((doctor) => doctor.unitId === unitId) : doctors),
     [doctors, unitId],
@@ -44,10 +46,10 @@ function ReceptionistPatients() {
     [patients, doctorId],
   )
 
-  const handleAdd = () => {
+  const handleAdd = async () => {
     const trimmed = name.trim()
     if (!trimmed || !doctorId) return
-    addPatient({
+    await addPatient({
       id: `pat-${Date.now()}`,
       doctorId,
       name: trimmed,
@@ -55,6 +57,7 @@ function ReceptionistPatients() {
       address: address.trim() || undefined,
       historyDate: historyDate || undefined,
     })
+    showToast('Paciente agregado correctamente.')
     setName('')
     setPhone('')
     setAddress('')
@@ -65,11 +68,15 @@ function ReceptionistPatients() {
     setDoctorId(unitDoctors[0]?.id ?? '')
   }, [unitDoctors])
 
-  const handleEditSave = () => {
+  useEffect(() => {
+    void loadPatientsForDoctor(doctorId)
+  }, [doctorId, loadPatientsForDoctor])
+
+  const handleEditSave = async () => {
     if (!editingPatient) return
     const trimmed = editingPatient.name.trim()
     if (!trimmed) return
-    updatePatient({
+    await updatePatient({
       ...editingPatient,
       name: trimmed,
       phone: editingPatient.phone?.trim() || undefined,
@@ -77,6 +84,7 @@ function ReceptionistPatients() {
       historyDate: editingPatient.historyDate || undefined,
     })
     setEditingPatient(null)
+    showToast('Paciente actualizado correctamente.')
   }
 
   const handleDoctorChange = (nextDoctorId: string) => {

@@ -6,6 +6,7 @@ import App from './App.tsx'
 import './index.css'
 import { AuthProvider } from './auth/AuthContext'
 import { DataProvider } from './data/DataContext'
+import { ToastProvider } from './components/ToastProvider'
 
 const theme = createTheme({
   palette: {
@@ -23,13 +24,15 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <ThemeProvider theme={theme}>
       <CssBaseline />
-      <AuthProvider>
-        <DataProvider>
-          <BrowserRouter>
-            <App />
-          </BrowserRouter>
-        </DataProvider>
-      </AuthProvider>
+      <ToastProvider>
+        <AuthProvider>
+          <DataProvider>
+            <BrowserRouter>
+              <App />
+            </BrowserRouter>
+          </DataProvider>
+        </AuthProvider>
+      </ToastProvider>
     </ThemeProvider>
   </React.StrictMode>,
 )

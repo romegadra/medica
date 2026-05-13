@@ -1,7 +1,8 @@
 import { createContext, useContext, useEffect, useMemo, useState } from 'react'
 import { apiRequest } from '../api/client'
+import { useToast } from '../components/ToastProvider'
 
-export type Role = 'admin' | 'receptionist' | 'doctor'
+export type Role = 'superadmin' | 'admin' | 'receptionist' | 'doctor'
 
 type AuthState = {
   role: Role | null
@@ -25,8 +26,11 @@ const storageUnitKey = 'med.unitId'
 const storageReceptionistKey = 'med.receptionistId'
 const storageTokenKey = 'med.token'
 const storageMustChangeKey = 'med.mustChangePassword'
+const storageSessionStartedKey = 'med.sessionStartedAt'
+const receptionistSessionDurationMs = 4 * 60 * 60 * 1000
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
+  const { showToast } = useToast()
   const [role, setRole] = useState<Role | null>(null)
   const [doctorId, setDoctorId] = useState<string | null>(null)
   const [unitId, setUnitId] = useState<string | null>(null)
@@ -34,17 +38,44 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [token, setToken] = useState<string | null>(null)
   const [mustChangePassword, setMustChangePassword] = useState(false)
 
+  const clearSession = () => {
+    window.localStorage.removeItem(storageRoleKey)
+    window.localStorage.removeItem(storageDoctorKey)
+    window.localStorage.removeItem(storageUnitKey)
+    window.localStorage.removeItem(storageReceptionistKey)
+    window.localStorage.removeItem(storageTokenKey)
+    window.localStorage.removeItem(storageMustChangeKey)
+    window.localStorage.removeItem(storageSessionStartedKey)
+    setRole(null)
+    setDoctorId(null)
+    setUnitId(null)
+    setReceptionistId(null)
+    setToken(null)
+    setMustChangePassword(false)
+  }
+
   useEffect(() => {
     const stored = window.localStorage.getItem(storageRoleKey) as Role | null
-    if (stored === 'admin' || stored === 'receptionist') {
+    const sessionStartedAt = Number(window.localStorage.getItem(storageSessionStartedKey))
+    if (
+      stored === 'receptionist' &&
+      sessionStartedAt &&
+      Date.now() - sessionStartedAt >= receptionistSessionDurationMs
+    ) {
+      clearSession()
+      return
+    }
+
+    if (stored === 'superadmin' || stored === 'admin' || stored === 'receptionist') {
       setRole(stored)
+      setUnitId(window.localStorage.getItem(storageUnitKey))
     }
     if (stored === 'doctor') {
       setRole('doctor')
       setDoctorId(window.localStorage.getItem(storageDoctorKey))
+      setUnitId(window.localStorage.getItem(storageUnitKey))
     }
     if (stored === 'receptionist') {
-      setUnitId(window.localStorage.getItem(storageUnitKey))
       setReceptionistId(window.localStorage.getItem(storageReceptionistKey))
     }
     const storedToken = window.localStorage.getItem(storageTokenKey)
@@ -56,6 +87,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setMustChangePassword(true)
     }
   }, [])
+
+  useEffect(() => {
+    if (role !== 'receptionist') return
+
+    const sessionStartedAt = Number(window.localStorage.getItem(storageSessionStartedKey)) || Date.now()
+    window.localStorage.setItem(storageSessionStartedKey, String(sessionStartedAt))
+    const remaining = receptionistSessionDurationMs - (Date.now() - sessionStartedAt)
+    const timeout = window.setTimeout(
+      () => {
+        clearSession()
+        showToast('Tu sesión de recepción expiró por seguridad.', 'info')
+      },
+      Math.max(0, remaining),
+    )
+
+    return () => window.clearTimeout(timeout)
+  }, [role, showToast])
+
 
   const value = useMemo(
     () => ({
@@ -77,6 +126,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           }>('/auth/login', 'POST', { email, password })
           window.localStorage.setItem(storageRoleKey, response.role)
           window.localStorage.setItem(storageTokenKey, response.token)
+          if (response.role === 'receptionist') {
+            window.localStorage.setItem(storageSessionStartedKey, String(Date.now()))
+          } else {
+            window.localStorage.removeItem(storageSessionStartedKey)
+          }
           if (response.doctorId) {
             window.localStorage.setItem(storageDoctorKey, response.doctorId)
           } else {
@@ -113,6 +167,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         window.localStorage.setItem(storageRoleKey, 'receptionist')
         window.localStorage.setItem(storageUnitKey, nextUnitId)
         window.localStorage.setItem(storageReceptionistKey, nextReceptionistId)
+        window.localStorage.setItem(storageSessionStartedKey, String(Date.now()))
         setRole('receptionist')
         setDoctorId(null)
         setUnitId(nextUnitId)
@@ -121,6 +176,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       loginDoctor: (nextDoctorId: string) => {
         window.localStorage.setItem(storageRoleKey, 'doctor')
         window.localStorage.setItem(storageDoctorKey, nextDoctorId)
+        window.localStorage.removeItem(storageSessionStartedKey)
         setRole('doctor')
         setDoctorId(nextDoctorId)
         setUnitId(null)
@@ -132,18 +188,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setMustChangePassword(false)
       },
       logout: () => {
-        window.localStorage.removeItem(storageRoleKey)
-        window.localStorage.removeItem(storageDoctorKey)
-        window.localStorage.removeItem(storageUnitKey)
-        window.localStorage.removeItem(storageReceptionistKey)
-        window.localStorage.removeItem(storageTokenKey)
-        window.localStorage.removeItem(storageMustChangeKey)
-        setRole(null)
-        setDoctorId(null)
-        setUnitId(null)
-        setReceptionistId(null)
-        setToken(null)
-        setMustChangePassword(false)
+        clearSession()
       },
     }),
     [role, doctorId, unitId, receptionistId, token, mustChangePassword],

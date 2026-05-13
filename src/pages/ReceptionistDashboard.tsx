@@ -33,6 +33,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { useData } from '../data/DataContext'
 import { useAuth } from '../auth/AuthContext'
 import type { Appointment } from '../data/types'
+import { useToast } from '../components/ToastProvider'
 
 type CalendarView = 'timeGridWeek' | 'dayGridMonth'
 type DialogMode = 'create' | 'edit'
@@ -87,8 +88,10 @@ function ReceptionistDashboard() {
     updateAppointment,
     cancelAppointment,
     addPatient,
+    loadPatientsForDoctor,
   } = useData()
   const { unitId } = useAuth()
+  const { showToast } = useToast()
   const unitDoctors = useMemo(
     () => (unitId ? doctors.filter((doctor) => doctor.unitId === unitId) : doctors),
     [doctors, unitId],
@@ -125,7 +128,8 @@ function ReceptionistDashboard() {
   useEffect(() => {
     setPatientFilterId('all')
     setPatientFilterText('')
-  }, [doctorId])
+    void loadPatientsForDoctor(doctorId)
+  }, [doctorId, loadPatientsForDoctor])
 
   const doctorPatients = useMemo(
     () => patients.filter((patient) => patient.doctorId === doctorId),
@@ -210,14 +214,16 @@ function ReceptionistDashboard() {
         setError('Ingresa un nombre para el nuevo paciente.')
         return
       }
-      finalPatientId = `pat-${Date.now()}`
       finalPatientName = newPatientName.trim()
-      addPatient({
-        id: finalPatientId,
+      const createdPatient = await addPatient({
+        id: `pat-${Date.now()}`,
         doctorId,
         name: finalPatientName,
         phone: newPatientPhone.trim() || undefined,
       })
+      finalPatientId = createdPatient.id
+      finalPatientName = createdPatient.name
+      showToast('Paciente agregado correctamente.')
     }
 
     const patientName =
@@ -256,6 +262,7 @@ function ReceptionistDashboard() {
 
     setDialogOpen(false)
     setError(null)
+    showToast(mode === 'edit' ? 'Cita actualizada correctamente.' : 'Cita creada correctamente.')
   }
 
   const handleCancelAppointment = async () => {
@@ -270,6 +277,7 @@ function ReceptionistDashboard() {
     setCancelReason('')
     setEditingId(null)
     setError(null)
+    showToast('Cita cancelada correctamente.')
   }
 
   return (
@@ -418,7 +426,9 @@ function ReceptionistDashboard() {
             if (!result.ok) {
               setError(result.reason ?? 'No se pudo mover la cita.')
               info.revert()
+              return
             }
+            showToast('Cita actualizada correctamente.')
           }}
           eventResize={async (info) => {
             const appointment = appointments.find((item) => item.id === info.event.id)
@@ -442,7 +452,9 @@ function ReceptionistDashboard() {
             if (!result.ok) {
               setError(result.reason ?? 'No se pudo ajustar la cita.')
               info.revert()
+              return
             }
+            showToast('Cita actualizada correctamente.')
           }}
           eventClick={(info) => {
             const appointment = appointments.find((item) => item.id === info.event.id)

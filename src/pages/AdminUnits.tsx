@@ -19,12 +19,19 @@ import {
 } from '@mui/material'
 import DeleteIcon from '@mui/icons-material/Delete'
 import EditIcon from '@mui/icons-material/Edit'
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
+import { useAuth } from '../auth/AuthContext'
 import { useData } from '../data/DataContext'
 import type { Unit } from '../data/types'
 
 function AdminUnits() {
   const { units, addUnit, updateUnit, removeUnit } = useData()
+  const { role, unitId } = useAuth()
+  const canManageUnits = role === 'superadmin' || (role === 'admin' && !unitId)
+  const visibleUnits = useMemo(
+    () => (role === 'admin' && unitId ? units.filter((unit) => unit.id === unitId) : units),
+    [role, unitId, units],
+  )
   const [name, setName] = useState('')
   const [type, setType] = useState<'clinic' | 'individual'>('clinic')
   const [address, setAddress] = useState('')
@@ -82,6 +89,7 @@ function AdminUnits() {
         </Typography>
       </Box>
 
+      {canManageUnits && (
       <Paper sx={{ p: 3 }} elevation={2}>
         <Stack spacing={2}>
           <TextField
@@ -118,6 +126,7 @@ function AdminUnits() {
           </Button>
         </Stack>
       </Paper>
+      )}
 
       <Paper sx={{ p: 3 }} elevation={2}>
         <Stack spacing={1}>
@@ -134,7 +143,7 @@ function AdminUnits() {
               </TableRow>
             </TableHead>
             <TableBody>
-              {units.map((unit) => (
+              {visibleUnits.map((unit) => (
                 <TableRow key={unit.id}>
                   <TableCell>{unit.name}</TableCell>
                   <TableCell>{unit.type === 'clinic' ? 'Clínica' : 'Individual'}</TableCell>
@@ -145,9 +154,11 @@ function AdminUnits() {
                     <IconButton size="small" onClick={() => setEditingUnit(unit)}>
                       <EditIcon fontSize="small" />
                     </IconButton>
-                    <IconButton size="small" onClick={() => setDeleteUnit(unit)}>
-                      <DeleteIcon fontSize="small" />
-                    </IconButton>
+                    {canManageUnits && (
+                      <IconButton size="small" onClick={() => setDeleteUnit(unit)}>
+                        <DeleteIcon fontSize="small" />
+                      </IconButton>
+                    )}
                   </TableCell>
                 </TableRow>
               ))}

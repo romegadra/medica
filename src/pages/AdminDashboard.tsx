@@ -2,18 +2,32 @@ import { Box, Button, Divider, Paper, Stack, Switch, TextField, Typography } fro
 import { Link } from 'react-router-dom'
 import { useMemo, useState } from 'react'
 import { useData } from '../data/DataContext'
+import { useAuth } from '../auth/AuthContext'
 
 function AdminDashboard() {
   const { constraints, updateConstraints, doctors, patients, units } = useData()
+  const { role, unitId } = useAuth()
   const [form, setForm] = useState(constraints)
+  const canManageAdmins = role === 'superadmin' || (role === 'admin' && !unitId)
+  const visibleUnits = useMemo(
+    () => (role === 'admin' && unitId ? units.filter((unit) => unit.id === unitId) : units),
+    [role, unitId, units],
+  )
+  const visibleDoctors = useMemo(
+    () =>
+      role === 'admin' && unitId
+        ? doctors.filter((doctor) => doctor.unitId === unitId)
+        : doctors,
+    [doctors, role, unitId],
+  )
 
   const handleChange = (field: keyof typeof form, value: number | boolean) => {
     setForm((prev) => ({ ...prev, [field]: value }))
   }
 
   const unitSummary = useMemo(() => {
-    return units.map((unit) => {
-      const unitDoctors = doctors.filter((doctor) => doctor.unitId === unit.id)
+    return visibleUnits.map((unit) => {
+      const unitDoctors = visibleDoctors.filter((doctor) => doctor.unitId === unit.id)
       return {
         unit,
         doctors: unitDoctors.map((doctor) => ({
@@ -22,7 +36,7 @@ function AdminDashboard() {
         })),
       }
     })
-  }, [units, doctors, patients])
+  }, [visibleUnits, visibleDoctors, patients])
 
   return (
     <Stack spacing={3}>
@@ -86,6 +100,11 @@ function AdminDashboard() {
           <Button component={Link} to="/admin/units" variant="outlined">
             Administrar unidades
           </Button>
+          {canManageAdmins && (
+            <Button component={Link} to="/admin/users" variant="outlined">
+              Administrar admins
+            </Button>
+          )}
         </Stack>
       </Paper>
 
@@ -145,7 +164,7 @@ function AdminDashboard() {
           <Typography variant="h6">Resumen metricas</Typography>
           <Divider />
           <Typography variant="body2" color="text.secondary">
-            Unidades: {units.length}
+            Unidades: {visibleUnits.length}
           </Typography>
           {unitSummary.map(({ unit, doctors: unitDoctors }) => (
             <Stack key={unit.id} spacing={1}>

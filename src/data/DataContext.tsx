@@ -12,6 +12,7 @@ import type {
   VisitEntry,
 } from './types'
 import { apiRequest } from '../api/client'
+import { useAuth } from '../auth/AuthContext'
 
 type DataState = {
   doctors: Doctor[]
@@ -25,6 +26,7 @@ type DataState = {
   loading: boolean
   error: string | null
   refresh: () => void
+  loadPatientsForDoctor: (doctorId: string) => Promise<void>
   addSpecialty: (specialty: Specialty) => void
   updateSpecialty: (specialty: Specialty) => void
   removeSpecialty: (id: string) => void
@@ -46,8 +48,8 @@ type DataState = {
   addDoctorSchedule: (schedule: DoctorSchedule) => void
   updateDoctorSchedule: (schedule: DoctorSchedule) => void
   removeDoctorSchedule: (id: string) => void
-  addPatient: (patient: Patient) => void
-  updatePatient: (patient: Patient) => void
+  addPatient: (patient: Patient) => Promise<Patient>
+  updatePatient: (patient: Patient) => Promise<Patient>
   removePatient: (id: string) => void
   addAppointment: (appointment: Appointment) => Promise<{ ok: boolean; reason?: string }>
   updateAppointment: (appointment: Appointment) => Promise<{ ok: boolean; reason?: string }>
@@ -63,6 +65,7 @@ function overlaps(a: Appointment, b: Appointment) {
 }
 
 export function DataProvider({ children }: { children: React.ReactNode }) {
+  const { token, role, doctorId } = useAuth()
   const [appointments, setAppointments] = useState<Appointment[]>([])
   const [constraints, setConstraints] = useState<Constraints>({
     startHour: 8,
@@ -81,11 +84,37 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
+  const loadPatientsForDoctor = useCallback(async (nextDoctorId: string) => {
+    if (!nextDoctorId) return
+    const loaded = await apiRequest<Patient[]>(
+      `/patients?doctorId=${encodeURIComponent(nextDoctorId)}`,
+    )
+    setPatientList((prev) => [
+      ...prev.filter((patient) => patient.doctorId !== nextDoctorId),
+      ...loaded,
+    ])
+  }, [])
+
   const refresh = useCallback(() => {
     void (async () => {
+      if (!token || !role) {
+        setUnitList([])
+        setDoctorList([])
+        setDoctorScheduleList([])
+        setPatientList([])
+        setReceptionistList([])
+        setSpecialtyList([])
+        setTemplateList([])
+        setAppointments([])
+        setVisitList([])
+        setLoading(false)
+        return
+      }
+
       setLoading(true)
       setError(null)
       try {
+        const shouldLoadPatients = role === 'doctor' && doctorId
         const [
           unitsResponse,
           doctorsResponse,
@@ -100,7 +129,9 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
           apiRequest<Unit[]>('/units'),
           apiRequest<Doctor[]>('/doctors'),
           apiRequest<DoctorSchedule[]>('/doctor-schedules'),
-          apiRequest<Patient[]>('/patients'),
+          shouldLoadPatients
+            ? apiRequest<Patient[]>(`/patients?doctorId=${encodeURIComponent(doctorId)}`)
+            : Promise.resolve([]),
           apiRequest<Receptionist[]>('/receptionists'),
           apiRequest<Specialty[]>('/specialties'),
           apiRequest<SpecialtyTemplate[]>('/templates'),
@@ -123,7 +154,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         setLoading(false)
       }
     })()
-  }, [])
+  }, [doctorId, role, token])
 
   useEffect(() => {
     refresh()
@@ -142,6 +173,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       loading,
       error,
       refresh,
+      loadPatientsForDoctor,
       addSpecialty: (specialty) => {
         void (async () => {
           const created = await apiRequest<Specialty>('/specialties', 'POST', specialty)
@@ -292,17 +324,15 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
           setDoctorScheduleList((prev) => prev.filter((item) => item.id !== id))
         })()
       },
-      addPatient: (patient) => {
-        void (async () => {
-          const created = await apiRequest<Patient>('/patients', 'POST', patient)
-          setPatientList((prev) => [...prev, created])
-        })()
+      addPatient: async (patient) => {
+        const created = await apiRequest<Patient>('/patients', 'POST', patient)
+        setPatientList((prev) => [...prev.filter((item) => item.id !== created.id), created])
+        return created
       },
-      updatePatient: (patient) => {
-        void (async () => {
-          const updated = await apiRequest<Patient>(`/patients/${patient.id}`, 'PUT', patient)
-          setPatientList((prev) => prev.map((item) => (item.id === updated.id ? updated : item)))
-        })()
+      updatePatient: async (patient) => {
+        const updated = await apiRequest<Patient>(`/patients/${patient.id}`, 'PUT', patient)
+        setPatientList((prev) => prev.map((item) => (item.id === updated.id ? updated : item)))
+        return updated
       },
       removePatient: (id) => {
         void (async () => {
@@ -402,6 +432,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       loading,
       error,
       refresh,
+      loadPatientsForDoctor,
     ],
   )
 

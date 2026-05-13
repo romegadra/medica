@@ -21,18 +21,31 @@ import {
 import DeleteIcon from '@mui/icons-material/Delete'
 import EditIcon from '@mui/icons-material/Edit'
 import LockResetIcon from '@mui/icons-material/LockReset'
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { apiRequest } from '../api/client'
+import { useAuth } from '../auth/AuthContext'
 import { useData } from '../data/DataContext'
 import type { Receptionist } from '../data/types'
 
 function AdminReceptionists() {
   const { units, receptionists, addReceptionist, updateReceptionist, removeReceptionist } = useData()
+  const { role, unitId: adminUnitId } = useAuth()
+  const visibleUnits = useMemo(
+    () => (role === 'admin' && adminUnitId ? units.filter((unit) => unit.id === adminUnitId) : units),
+    [adminUnitId, role, units],
+  )
+  const visibleReceptionists = useMemo(
+    () =>
+      role === 'admin' && adminUnitId
+        ? receptionists.filter((receptionist) => receptionist.unitId === adminUnitId)
+        : receptionists,
+    [adminUnitId, receptionists, role],
+  )
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [address, setAddress] = useState('')
   const [phone, setPhone] = useState('')
-  const [unitId, setUnitId] = useState(units[0]?.id ?? '')
+  const [unitId, setUnitId] = useState(visibleUnits[0]?.id ?? '')
   const [editingReceptionist, setEditingReceptionist] = useState<Receptionist | null>(null)
   const [deleteReceptionist, setDeleteReceptionist] = useState<Receptionist | null>(null)
   const [resetReceptionist, setResetReceptionist] = useState<Receptionist | null>(null)
@@ -58,10 +71,10 @@ function AdminReceptionists() {
   }
 
   useEffect(() => {
-    if (!unitId && units.length > 0) {
-      setUnitId(units[0].id)
+    if (!unitId && visibleUnits.length > 0) {
+      setUnitId(visibleUnits[0].id)
     }
-  }, [units, unitId])
+  }, [visibleUnits, unitId])
 
   const handleEditSave = () => {
     if (!editingReceptionist) return
@@ -129,7 +142,7 @@ function AdminReceptionists() {
             value={unitId}
             onChange={(event) => setUnitId(event.target.value)}
           >
-            {units.map((unit) => (
+            {visibleUnits.map((unit) => (
               <MenuItem key={unit.id} value={unit.id}>
                 {unit.name}
               </MenuItem>
@@ -159,13 +172,13 @@ function AdminReceptionists() {
               </TableRow>
             </TableHead>
             <TableBody>
-              {receptionists.map((receptionist) => (
+              {visibleReceptionists.map((receptionist) => (
                 <TableRow key={receptionist.id}>
                   <TableCell>{receptionist.name}</TableCell>
                   <TableCell>{receptionist.email ?? '-'}</TableCell>
                   <TableCell>{receptionist.address}</TableCell>
                   <TableCell>{receptionist.phone}</TableCell>
-                  <TableCell>{units.find((unit) => unit.id === receptionist.unitId)?.name ?? 'Unidad'}</TableCell>
+                  <TableCell>{visibleUnits.find((unit) => unit.id === receptionist.unitId)?.name ?? 'Unidad'}</TableCell>
                   <TableCell align="right">
                     <IconButton size="small" onClick={() => setEditingReceptionist(receptionist)}>
                       <EditIcon fontSize="small" />
@@ -239,7 +252,7 @@ function AdminReceptionists() {
                 setEditingReceptionist((prev) => (prev ? { ...prev, unitId: event.target.value } : prev))
               }
             >
-              {units.map((unit) => (
+              {visibleUnits.map((unit) => (
                 <MenuItem key={unit.id} value={unit.id}>
                   {unit.name}
                 </MenuItem>
