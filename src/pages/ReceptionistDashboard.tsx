@@ -77,6 +77,19 @@ function diffMinutes(startIso: string, endIso: string) {
   return Math.max(0, Math.round((new Date(endIso).getTime() - new Date(startIso).getTime()) / 60000))
 }
 
+function toDateTimeLocalValue(iso: string) {
+  if (!iso) return ''
+  const date = new Date(iso)
+  if (Number.isNaN(date.getTime())) return ''
+  const localDate = new Date(date.getTime() - date.getTimezoneOffset() * 60000)
+  return localDate.toISOString().slice(0, 16)
+}
+
+function fromDateTimeLocalValue(value: string) {
+  if (!value) return ''
+  return new Date(value).toISOString()
+}
+
 function ReceptionistDashboard() {
   const {
     doctors,
@@ -204,6 +217,10 @@ function ReceptionistDashboard() {
   const handleSave = async () => {
     if (!appointmentStart || (!addingPatient && !patientId)) {
       setError('Selecciona un paciente para esta cita.')
+      return
+    }
+    if (!Number.isFinite(durationMinutes) || durationMinutes <= 0) {
+      setError('La duración debe ser mayor a 0 minutos.')
       return
     }
 
@@ -551,18 +568,33 @@ function ReceptionistDashboard() {
                 )}
               </>
             )}
-            <TextField label="Inicio" value={appointmentStart} disabled />
+            <TextField
+              label="Inicio"
+              type="datetime-local"
+              value={toDateTimeLocalValue(appointmentStart)}
+              onChange={(event) => setAppointmentStart(fromDateTimeLocalValue(event.target.value))}
+              InputLabelProps={{ shrink: true }}
+              inputProps={{ step: 60 }}
+            />
             <TextField
               label="Duración (minutos)"
               type="number"
-              inputProps={{ min: 10, step: 5 }}
+              inputProps={{ min: 1, step: 1 }}
               value={durationMinutes}
               onChange={(event) => setDurationMinutes(Number(event.target.value))}
             />
             <TextField
               label="Fin"
-              value={appointmentStart ? addMinutes(appointmentStart, durationMinutes) : ''}
-              disabled
+              type="datetime-local"
+              value={appointmentStart ? toDateTimeLocalValue(addMinutes(appointmentStart, durationMinutes)) : ''}
+              onChange={(event) => {
+                const nextEnd = fromDateTimeLocalValue(event.target.value)
+                if (appointmentStart && nextEnd) {
+                  setDurationMinutes(diffMinutes(appointmentStart, nextEnd))
+                }
+              }}
+              InputLabelProps={{ shrink: true }}
+              inputProps={{ step: 60 }}
             />
             <TextField
               label="Tipo de pago"

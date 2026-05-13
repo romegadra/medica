@@ -1,13 +1,17 @@
 import { Box, Button, Divider, Paper, Stack, Switch, TextField, Typography } from '@mui/material'
 import { Link } from 'react-router-dom'
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useData } from '../data/DataContext'
 import { useAuth } from '../auth/AuthContext'
+import { useToast } from '../components/ToastProvider'
 
 function AdminDashboard() {
   const { constraints, updateConstraints, doctors, patients, units } = useData()
   const { role, unitId } = useAuth()
+  const { showToast } = useToast()
   const [form, setForm] = useState(constraints)
+  const [savingRestrictions, setSavingRestrictions] = useState(false)
+  const [restrictionError, setRestrictionError] = useState<string | null>(null)
   const canManageAdmins = role === 'superadmin' || (role === 'admin' && !unitId)
   const visibleUnits = useMemo(
     () => (role === 'admin' && unitId ? units.filter((unit) => unit.id === unitId) : units),
@@ -23,6 +27,27 @@ function AdminDashboard() {
 
   const handleChange = (field: keyof typeof form, value: number | boolean) => {
     setForm((prev) => ({ ...prev, [field]: value }))
+  }
+
+  useEffect(() => {
+    setForm(constraints)
+  }, [constraints])
+
+  const handleSaveRestrictions = async () => {
+    setRestrictionError(null)
+    if (form.startHour >= form.endHour) {
+      setRestrictionError('La hora de inicio debe ser menor a la hora fin.')
+      return
+    }
+    setSavingRestrictions(true)
+    try {
+      await updateConstraints(form)
+      showToast('Restricciones guardadas correctamente.')
+    } catch (err) {
+      setRestrictionError(err instanceof Error ? err.message : 'No se pudieron guardar las restricciones.')
+    } finally {
+      setSavingRestrictions(false)
+    }
   }
 
   const unitSummary = useMemo(() => {
@@ -52,6 +77,7 @@ function AdminDashboard() {
       <Paper sx={{ p: 3 }} elevation={2}>
         <Stack spacing={2}>
           <Typography variant="h6">Restricciones de agenda</Typography>
+          {restrictionError && <Typography color="error">{restrictionError}</Typography>}
           <Stack direction={{ xs: 'column', md: 'row' }} spacing={2}>
             <TextField
               label="Hora inicio"
@@ -85,8 +111,8 @@ function AdminDashboard() {
             />
             <Typography variant="body2">Permitir citas traslapadas</Typography>
           </Stack>
-          <Button variant="contained" onClick={() => updateConstraints(form)}>
-            Guardar restricciones
+          <Button variant="contained" onClick={handleSaveRestrictions} disabled={savingRestrictions}>
+            {savingRestrictions ? 'Guardando...' : 'Guardar restricciones'}
           </Button>
         </Stack>
       </Paper>

@@ -55,7 +55,7 @@ type DataState = {
   updateAppointment: (appointment: Appointment) => Promise<{ ok: boolean; reason?: string }>
   cancelAppointment: (id: string, reason?: string) => Promise<{ ok: boolean; reason?: string }>
   removeAppointment: (id: string) => void
-  updateConstraints: (next: Constraints) => void
+  updateConstraints: (next: Constraints) => Promise<Constraints>
 }
 
 const DataContext = createContext<DataState | undefined>(undefined)
@@ -125,6 +125,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
           templatesResponse,
           appointmentsResponse,
           visitsResponse,
+          settingsResponse,
         ] = await Promise.all([
           apiRequest<Unit[]>('/units'),
           apiRequest<Doctor[]>('/doctors'),
@@ -137,6 +138,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
           apiRequest<SpecialtyTemplate[]>('/templates'),
           apiRequest<Appointment[]>('/appointments'),
           apiRequest<VisitEntry[]>('/visits'),
+          apiRequest<Constraints>('/settings'),
         ])
 
         setUnitList(unitsResponse)
@@ -148,6 +150,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         setTemplateList(templatesResponse)
         setAppointments(appointmentsResponse)
         setVisitList(visitsResponse)
+        setConstraints(settingsResponse)
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Error al cargar datos')
       } finally {
@@ -412,8 +415,10 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
           setAppointments((prev) => prev.filter((item) => item.id !== id))
         })()
       },
-      updateConstraints: (next) => {
-        setConstraints(next)
+      updateConstraints: async (next) => {
+        const updated = await apiRequest<Constraints>('/settings', 'PUT', next)
+        setConstraints(updated)
+        return updated
       },
     }),
     [
