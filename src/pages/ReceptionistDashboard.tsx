@@ -11,6 +11,7 @@ import {
   Alert,
   Box,
   Button,
+  Chip,
   Divider,
   Dialog,
   DialogActions,
@@ -94,6 +95,7 @@ function ReceptionistDashboard() {
   const {
     doctors,
     doctorSchedules,
+    doctorBlockedTimes,
     patients,
     appointments,
     constraints,
@@ -102,6 +104,8 @@ function ReceptionistDashboard() {
     cancelAppointment,
     addPatient,
     loadPatientsForDoctor,
+    addDoctorBlockedTime,
+    removeDoctorBlockedTime,
   } = useData()
   const { unitId } = useAuth()
   const { showToast } = useToast()
@@ -119,6 +123,7 @@ function ReceptionistDashboard() {
   const [appointmentStart, setAppointmentStart] = useState('')
   const [notes, setNotes] = useState('')
   const [paymentType, setPaymentType] = useState('')
+  const [attended, setAttended] = useState(false)
   const [mode, setMode] = useState<DialogMode>('create')
   const [editingId, setEditingId] = useState<string | null>(null)
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false)
@@ -126,6 +131,7 @@ function ReceptionistDashboard() {
   const [addingPatient, setAddingPatient] = useState(false)
   const [newPatientName, setNewPatientName] = useState('')
   const [newPatientPhone, setNewPatientPhone] = useState('')
+  const [blockReason, setBlockReason] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [calendarTitle, setCalendarTitle] = useState('')
   const calendarRef = useRef<FullCalendar | null>(null)
@@ -151,6 +157,10 @@ function ReceptionistDashboard() {
   const selectedDoctorSchedules = useMemo(
     () => doctorSchedules.filter((schedule) => schedule.doctorId === doctorId),
     [doctorSchedules, doctorId],
+  )
+  const selectedDoctorBlocks = useMemo(
+    () => doctorBlockedTimes.filter((block) => block.doctorId === doctorId),
+    [doctorBlockedTimes, doctorId],
   )
   const businessHours = useMemo(
     () =>
@@ -185,13 +195,27 @@ function ReceptionistDashboard() {
               ?.name
             return patientName ? patientName.toLowerCase().includes(normalized) : false
           })
-    return scoped.map((appointment) => ({
+    const appointmentEvents = scoped.map((appointment) => ({
       id: appointment.id,
-      title: appointment.title,
+      title: `${appointment.attended ? 'Asistió - ' : ''}${appointment.title}`,
       start: appointment.start,
       end: appointment.end,
     }))
-  }, [appointments, doctorId, patientFilterId, patientFilterText, doctorPatients])
+    const blockEvents = selectedDoctorBlocks.map((block) => ({
+      id: `block-${block.id}`,
+      title: block.reason ? `Bloqueado: ${block.reason}` : 'Bloqueado',
+      start: block.start,
+      end: block.end,
+      display: 'background',
+      color: '#ef5350',
+    }))
+    return [...appointmentEvents, ...blockEvents]
+  }, [appointments, doctorId, patientFilterId, patientFilterText, doctorPatients, selectedDoctorBlocks])
+
+  const overlapsBlock = (start: Date, end: Date) =>
+    selectedDoctorBlocks.some(
+      (block) => start < new Date(block.end) && new Date(block.start) < end,
+    )
 
   const handleSelect = (info: { startStr: string; endStr: string }) => {
     if (!doctorId) {
@@ -208,6 +232,8 @@ function ReceptionistDashboard() {
     setDurationMinutes(diffMinutes(info.startStr, info.endStr) || constraints.slotMinutes)
     setNotes('')
     setPaymentType('')
+    setAttended(false)
+    setBlockReason('')
     setMode('create')
     setEditingId(null)
     setError(null)
@@ -255,6 +281,10 @@ function ReceptionistDashboard() {
       setError('La cita esta fuera del horario disponible del doctor.')
       return
     }
+    if (overlapsBlock(new Date(appointmentStart), new Date(end))) {
+      setError('La cita se cruza con un horario bloqueado.')
+      return
+    }
 
     const appointment: Appointment = {
       id: mode === 'edit' && editingId ? editingId : `apt-${Date.now()}`,
@@ -264,6 +294,7 @@ function ReceptionistDashboard() {
       start: appointmentStart,
       end,
       status: 'scheduled',
+      attended,
       notes: notes.trim() || undefined,
       paymentType: paymentType || undefined,
     }
@@ -295,6 +326,39 @@ function ReceptionistDashboard() {
     setEditingId(null)
     setError(null)
     showToast('Cita cancelada correctamente.')
+  }
+
+  const handleBlockSelectedTime = async () => {
+    if (!appointmentStart || !doctorId) return
+    if (!Number.isFinite(durationMinutes) || durationMinutes <= 0) {
+      setError('La duración debe ser mayor a 0 minutos.')
+      return
+    }
+    const end = addMinutes(appointmentStart, durationMinutes)
+    const result = await addDoctorBlockedTime({
+      id: `block-${Date.now()}`,
+      doctorId,
+      start: appointmentStart,
+      end,
+      reason: blockReason.trim() || undefined,
+    })
+    if (!result.ok) {
+      setError(result.reason ?? 'No se pudo bloquear el horario.')
+      return
+    }
+    setDialogOpen(false)
+    setBlockReason('')
+    setError(null)
+    showToast('Horario bloqueado correctamente.')
+  }
+
+  const handleUnblock = async (id: string) => {
+    const result = await removeDoctorBlockedTime(id)
+    if (!result.ok) {
+      setError(result.reason ?? 'No se pudo desbloquear el horario.')
+      return
+    }
+    showToast('Horario desbloqueado correctamente.')
   }
 
   return (
@@ -435,6 +499,16 @@ function ReceptionistDashboard() {
               info.revert()
               return
             }
+            if (
+              overlapsBlock(
+                info.event.start ?? new Date(appointment.start),
+                info.event.end ?? new Date(appointment.end),
+              )
+            ) {
+              setError('La cita se cruza con un horario bloqueado.')
+              info.revert()
+              return
+            }
             const result = await updateAppointment({
               ...appointment,
               start: info.event.start?.toISOString() ?? appointment.start,
@@ -461,6 +535,16 @@ function ReceptionistDashboard() {
               info.revert()
               return
             }
+            if (
+              overlapsBlock(
+                info.event.start ?? new Date(appointment.start),
+                info.event.end ?? new Date(appointment.end),
+              )
+            ) {
+              setError('La cita se cruza con un horario bloqueado.')
+              info.revert()
+              return
+            }
             const result = await updateAppointment({
               ...appointment,
               start: info.event.start?.toISOString() ?? appointment.start,
@@ -481,6 +565,7 @@ function ReceptionistDashboard() {
             setDurationMinutes(diffMinutes(appointment.start, appointment.end) || constraints.slotMinutes)
             setNotes(appointment.notes ?? '')
             setPaymentType(appointment.paymentType ?? '')
+            setAttended(Boolean(appointment.attended))
             setAddingPatient(false)
             setNewPatientName('')
             setNewPatientPhone('')
@@ -494,13 +579,55 @@ function ReceptionistDashboard() {
           slotDuration={`00:${constraints.slotMinutes.toString().padStart(2, '0')}:00`}
           businessHours={businessHours}
           selectConstraint="businessHours"
-          selectAllow={(info) => isWithinSchedule(info.start, info.end, selectedDoctorSchedules)}
+          selectAllow={(info) =>
+            isWithinSchedule(info.start, info.end, selectedDoctorSchedules) &&
+            !overlapsBlock(info.start, info.end)
+          }
           eventAllow={(dropInfo) =>
-            isWithinSchedule(dropInfo.start, dropInfo.end, selectedDoctorSchedules)
+            isWithinSchedule(dropInfo.start, dropInfo.end, selectedDoctorSchedules) &&
+            !overlapsBlock(dropInfo.start, dropInfo.end)
           }
           eventOverlap={constraints.allowOverlap}
           selectOverlap={constraints.allowOverlap}
         />
+      </Paper>
+
+      <Paper sx={{ p: 2 }} elevation={2}>
+        <Stack spacing={1.5}>
+          <Stack direction={{ xs: 'column', md: 'row' }} justifyContent="space-between" spacing={1}>
+            <Typography variant="h6">Horarios bloqueados</Typography>
+            <Typography variant="body2" color="text.secondary">
+              Selecciona un rango en la agenda y usa "Bloquear horario".
+            </Typography>
+          </Stack>
+          {selectedDoctorBlocks.length === 0 ? (
+            <Typography variant="body2" color="text.secondary">
+              Sin bloqueos para este doctor.
+            </Typography>
+          ) : (
+            selectedDoctorBlocks.map((block) => (
+              <Stack
+                key={block.id}
+                direction={{ xs: 'column', sm: 'row' }}
+                spacing={1}
+                alignItems={{ xs: 'flex-start', sm: 'center' }}
+                justifyContent="space-between"
+                sx={{ borderTop: '1px solid', borderColor: 'divider', pt: 1 }}
+              >
+                <Box>
+                  <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                    {new Date(block.start).toLocaleString('es-MX')} -{' '}
+                    {new Date(block.end).toLocaleString('es-MX')}
+                  </Typography>
+                  {block.reason && <Chip label={block.reason} size="small" />}
+                </Box>
+                <Button variant="outlined" color="error" size="small" onClick={() => handleUnblock(block.id)}>
+                  Desbloquear
+                </Button>
+              </Stack>
+            ))
+          )}
+        </Stack>
       </Paper>
 
       <Dialog
@@ -513,8 +640,10 @@ function ReceptionistDashboard() {
           setNewPatientPhone('')
           setNotes('')
           setPaymentType('')
+          setAttended(false)
           setCancelDialogOpen(false)
           setCancelReason('')
+          setBlockReason('')
           setError(null)
         }}
         maxWidth="xs"
@@ -609,6 +738,15 @@ function ReceptionistDashboard() {
                 </MenuItem>
               ))}
             </TextField>
+            <FormControlLabel
+              control={
+                <Switch
+                  checked={attended}
+                  onChange={(event) => setAttended(event.target.checked)}
+                />
+              }
+              label="Paciente asistió"
+            />
             <TextField
               label="Notas"
               value={notes}
@@ -616,6 +754,19 @@ function ReceptionistDashboard() {
               multiline
               minRows={3}
             />
+            {mode === 'create' && (
+              <>
+                <Divider />
+                <TextField
+                  label="Motivo del bloqueo"
+                  value={blockReason}
+                  onChange={(event) => setBlockReason(event.target.value)}
+                />
+                <Button variant="outlined" color="warning" onClick={handleBlockSelectedTime}>
+                  Bloquear horario
+                </Button>
+              </>
+            )}
           </Stack>
         </DialogContent>
         <DialogActions>

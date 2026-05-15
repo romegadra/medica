@@ -3,6 +3,7 @@ import type {
   Appointment,
   Constraints,
   Doctor,
+  DoctorBlockedTime,
   DoctorSchedule,
   Patient,
   Receptionist,
@@ -17,6 +18,7 @@ import { useAuth } from '../auth/AuthContext'
 type DataState = {
   doctors: Doctor[]
   doctorSchedules: DoctorSchedule[]
+  doctorBlockedTimes: DoctorBlockedTime[]
   patients: Patient[]
   units: Unit[]
   receptionists: Receptionist[]
@@ -48,6 +50,8 @@ type DataState = {
   addDoctorSchedule: (schedule: DoctorSchedule) => void
   updateDoctorSchedule: (schedule: DoctorSchedule) => void
   removeDoctorSchedule: (id: string) => void
+  addDoctorBlockedTime: (block: DoctorBlockedTime) => Promise<{ ok: boolean; reason?: string }>
+  removeDoctorBlockedTime: (id: string) => Promise<{ ok: boolean; reason?: string }>
   addPatient: (patient: Patient) => Promise<Patient>
   updatePatient: (patient: Patient) => Promise<Patient>
   removePatient: (id: string) => void
@@ -64,6 +68,10 @@ function overlaps(a: Appointment, b: Appointment) {
   return new Date(a.start) < new Date(b.end) && new Date(b.start) < new Date(a.end)
 }
 
+function overlapsBlock(appointment: Appointment, block: DoctorBlockedTime) {
+  return new Date(appointment.start) < new Date(block.end) && new Date(block.start) < new Date(appointment.end)
+}
+
 export function DataProvider({ children }: { children: React.ReactNode }) {
   const { token, role, doctorId } = useAuth()
   const [appointments, setAppointments] = useState<Appointment[]>([])
@@ -76,6 +84,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   const [unitList, setUnitList] = useState<Unit[]>([])
   const [doctorList, setDoctorList] = useState<Doctor[]>([])
   const [doctorScheduleList, setDoctorScheduleList] = useState<DoctorSchedule[]>([])
+  const [doctorBlockedTimeList, setDoctorBlockedTimeList] = useState<DoctorBlockedTime[]>([])
   const [patientList, setPatientList] = useState<Patient[]>([])
   const [receptionistList, setReceptionistList] = useState<Receptionist[]>([])
   const [visitList, setVisitList] = useState<VisitEntry[]>([])
@@ -101,6 +110,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         setUnitList([])
         setDoctorList([])
         setDoctorScheduleList([])
+        setDoctorBlockedTimeList([])
         setPatientList([])
         setReceptionistList([])
         setSpecialtyList([])
@@ -119,6 +129,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
           unitsResponse,
           doctorsResponse,
           doctorSchedulesResponse,
+          doctorBlockedTimesResponse,
           patientsResponse,
           receptionistsResponse,
           specialtiesResponse,
@@ -130,6 +141,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
           apiRequest<Unit[]>('/units'),
           apiRequest<Doctor[]>('/doctors'),
           apiRequest<DoctorSchedule[]>('/doctor-schedules'),
+          apiRequest<DoctorBlockedTime[]>('/doctor-blocks'),
           shouldLoadPatients
             ? apiRequest<Patient[]>(`/patients?doctorId=${encodeURIComponent(doctorId)}`)
             : Promise.resolve([]),
@@ -144,6 +156,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         setUnitList(unitsResponse)
         setDoctorList(doctorsResponse)
         setDoctorScheduleList(doctorSchedulesResponse)
+        setDoctorBlockedTimeList(doctorBlockedTimesResponse)
         setPatientList(patientsResponse)
         setReceptionistList(receptionistsResponse)
         setSpecialtyList(specialtiesResponse)
@@ -167,6 +180,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     () => ({
       doctors: doctorList,
       doctorSchedules: doctorScheduleList,
+      doctorBlockedTimes: doctorBlockedTimeList,
       patients: patientList,
       units: unitList,
       receptionists: receptionistList,
@@ -225,6 +239,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
           setReceptionistList((prev) => prev.filter((item) => item.unitId !== id))
           setVisitList((prev) => prev.filter((item) => !affectedDoctorIds.includes(item.doctorId)))
           setDoctorScheduleList((prev) => prev.filter((item) => !affectedDoctorIds.includes(item.doctorId)))
+          setDoctorBlockedTimeList((prev) => prev.filter((item) => !affectedDoctorIds.includes(item.doctorId)))
         })()
       },
       addReceptionist: (receptionist) => {
@@ -299,6 +314,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
           setAppointments((prev) => prev.filter((item) => item.doctorId !== id))
           setVisitList((prev) => prev.filter((item) => item.doctorId !== id))
           setDoctorScheduleList((prev) => prev.filter((item) => item.doctorId !== id))
+          setDoctorBlockedTimeList((prev) => prev.filter((item) => item.doctorId !== id))
         })()
       },
       addDoctorSchedule: (schedule) => {
@@ -324,6 +340,26 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
           await apiRequest<void>(`/doctor-schedules/${id}`, 'DELETE')
           setDoctorScheduleList((prev) => prev.filter((item) => item.id !== id))
         })()
+      },
+      addDoctorBlockedTime: async (block) => {
+        try {
+          const created = await apiRequest<DoctorBlockedTime>('/doctor-blocks', 'POST', block)
+          setDoctorBlockedTimeList((prev) => [...prev, created])
+          return { ok: true }
+        } catch (err) {
+          const message = err instanceof Error ? err.message : 'Error al bloquear horario'
+          return { ok: false, reason: message }
+        }
+      },
+      removeDoctorBlockedTime: async (id) => {
+        try {
+          await apiRequest<void>(`/doctor-blocks/${id}`, 'DELETE')
+          setDoctorBlockedTimeList((prev) => prev.filter((item) => item.id !== id))
+          return { ok: true }
+        } catch (err) {
+          const message = err instanceof Error ? err.message : 'Error al desbloquear horario'
+          return { ok: false, reason: message }
+        }
       },
       addPatient: async (patient) => {
         const created = await apiRequest<Patient>('/patients', 'POST', patient)
@@ -354,6 +390,12 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
             return { ok: false, reason: 'Traslape con una cita existente.' }
           }
         }
+        const blocked = doctorBlockedTimeList.some(
+          (block) => block.doctorId === appointment.doctorId && overlapsBlock(appointment, block),
+        )
+        if (blocked) {
+          return { ok: false, reason: 'La cita se cruza con un horario bloqueado.' }
+        }
         try {
           const created = await apiRequest<Appointment>('/appointments', 'POST', appointment)
           setAppointments((prev) => [...prev, created])
@@ -379,6 +421,12 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
           if (conflict) {
             return { ok: false, reason: 'Traslape con una cita existente.' }
           }
+        }
+        const blocked = doctorBlockedTimeList.some(
+          (block) => block.doctorId === appointment.doctorId && overlapsBlock(appointment, block),
+        )
+        if (blocked) {
+          return { ok: false, reason: 'La cita se cruza con un horario bloqueado.' }
         }
         try {
           const updated = await apiRequest<Appointment>(
@@ -427,6 +475,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       unitList,
       doctorList,
       doctorScheduleList,
+      doctorBlockedTimeList,
       patientList,
       receptionistList,
       visitList,

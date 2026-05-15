@@ -74,6 +74,7 @@ export type Appointment = {
   start: string
   end: string
   status?: 'scheduled' | 'cancelled'
+  attended?: boolean
   notes?: string
   paymentType?: string
   cancellationReason?: string
@@ -86,6 +87,14 @@ export type DoctorSchedule = {
   dayOfWeek: number
   startTime: string
   endTime: string
+}
+
+export type DoctorBlockedTime = {
+  id: string
+  doctorId: string
+  start: string
+  end: string
+  reason?: string
 }
 
 export type Constraints = {
