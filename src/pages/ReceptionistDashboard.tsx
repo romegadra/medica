@@ -11,7 +11,6 @@ import {
   Alert,
   Box,
   Button,
-  Chip,
   Divider,
   Dialog,
   DialogActions,
@@ -35,6 +34,7 @@ import { useData } from '../data/DataContext'
 import { useAuth } from '../auth/AuthContext'
 import type { Appointment } from '../data/types'
 import { useToast } from '../components/ToastProvider'
+import DoctorBlockedTimeManager from '../components/DoctorBlockedTimeManager'
 
 type CalendarView = 'timeGridWeek' | 'dayGridMonth'
 type DialogMode = 'create' | 'edit'
@@ -104,8 +104,6 @@ function ReceptionistDashboard() {
     cancelAppointment,
     addPatient,
     loadPatientsForDoctor,
-    addDoctorBlockedTime,
-    removeDoctorBlockedTime,
   } = useData()
   const { unitId } = useAuth()
   const { showToast } = useToast()
@@ -131,7 +129,6 @@ function ReceptionistDashboard() {
   const [addingPatient, setAddingPatient] = useState(false)
   const [newPatientName, setNewPatientName] = useState('')
   const [newPatientPhone, setNewPatientPhone] = useState('')
-  const [blockReason, setBlockReason] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [calendarTitle, setCalendarTitle] = useState('')
   const calendarRef = useRef<FullCalendar | null>(null)
@@ -197,9 +194,12 @@ function ReceptionistDashboard() {
           })
     const appointmentEvents = scoped.map((appointment) => ({
       id: appointment.id,
-      title: `${appointment.attended ? 'Asistió - ' : ''}${appointment.title}`,
+      title: appointment.title,
       start: appointment.start,
       end: appointment.end,
+      backgroundColor: appointment.attended ? '#2e7d32' : undefined,
+      borderColor: appointment.attended ? '#2e7d32' : undefined,
+      textColor: appointment.attended ? '#fff' : undefined,
     }))
     const blockEvents = selectedDoctorBlocks.map((block) => ({
       id: `block-${block.id}`,
@@ -233,7 +233,6 @@ function ReceptionistDashboard() {
     setNotes('')
     setPaymentType('')
     setAttended(false)
-    setBlockReason('')
     setMode('create')
     setEditingId(null)
     setError(null)
@@ -326,39 +325,6 @@ function ReceptionistDashboard() {
     setEditingId(null)
     setError(null)
     showToast('Cita cancelada correctamente.')
-  }
-
-  const handleBlockSelectedTime = async () => {
-    if (!appointmentStart || !doctorId) return
-    if (!Number.isFinite(durationMinutes) || durationMinutes <= 0) {
-      setError('La duración debe ser mayor a 0 minutos.')
-      return
-    }
-    const end = addMinutes(appointmentStart, durationMinutes)
-    const result = await addDoctorBlockedTime({
-      id: `block-${Date.now()}`,
-      doctorId,
-      start: appointmentStart,
-      end,
-      reason: blockReason.trim() || undefined,
-    })
-    if (!result.ok) {
-      setError(result.reason ?? 'No se pudo bloquear el horario.')
-      return
-    }
-    setDialogOpen(false)
-    setBlockReason('')
-    setError(null)
-    showToast('Horario bloqueado correctamente.')
-  }
-
-  const handleUnblock = async (id: string) => {
-    const result = await removeDoctorBlockedTime(id)
-    if (!result.ok) {
-      setError(result.reason ?? 'No se pudo desbloquear el horario.')
-      return
-    }
-    showToast('Horario desbloqueado correctamente.')
   }
 
   return (
@@ -592,43 +558,7 @@ function ReceptionistDashboard() {
         />
       </Paper>
 
-      <Paper sx={{ p: 2 }} elevation={2}>
-        <Stack spacing={1.5}>
-          <Stack direction={{ xs: 'column', md: 'row' }} justifyContent="space-between" spacing={1}>
-            <Typography variant="h6">Horarios bloqueados</Typography>
-            <Typography variant="body2" color="text.secondary">
-              Selecciona un rango en la agenda y usa "Bloquear horario".
-            </Typography>
-          </Stack>
-          {selectedDoctorBlocks.length === 0 ? (
-            <Typography variant="body2" color="text.secondary">
-              Sin bloqueos para este doctor.
-            </Typography>
-          ) : (
-            selectedDoctorBlocks.map((block) => (
-              <Stack
-                key={block.id}
-                direction={{ xs: 'column', sm: 'row' }}
-                spacing={1}
-                alignItems={{ xs: 'flex-start', sm: 'center' }}
-                justifyContent="space-between"
-                sx={{ borderTop: '1px solid', borderColor: 'divider', pt: 1 }}
-              >
-                <Box>
-                  <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                    {new Date(block.start).toLocaleString('es-MX')} -{' '}
-                    {new Date(block.end).toLocaleString('es-MX')}
-                  </Typography>
-                  {block.reason && <Chip label={block.reason} size="small" />}
-                </Box>
-                <Button variant="outlined" color="error" size="small" onClick={() => handleUnblock(block.id)}>
-                  Desbloquear
-                </Button>
-              </Stack>
-            ))
-          )}
-        </Stack>
-      </Paper>
+      <DoctorBlockedTimeManager doctorId={doctorId} />
 
       <Dialog
         open={dialogOpen}
@@ -643,7 +573,6 @@ function ReceptionistDashboard() {
           setAttended(false)
           setCancelDialogOpen(false)
           setCancelReason('')
-          setBlockReason('')
           setError(null)
         }}
         maxWidth="xs"
@@ -754,19 +683,6 @@ function ReceptionistDashboard() {
               multiline
               minRows={3}
             />
-            {mode === 'create' && (
-              <>
-                <Divider />
-                <TextField
-                  label="Motivo del bloqueo"
-                  value={blockReason}
-                  onChange={(event) => setBlockReason(event.target.value)}
-                />
-                <Button variant="outlined" color="warning" onClick={handleBlockSelectedTime}>
-                  Bloquear horario
-                </Button>
-              </>
-            )}
           </Stack>
         </DialogContent>
         <DialogActions>
