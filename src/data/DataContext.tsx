@@ -69,7 +69,21 @@ function overlaps(a: Appointment, b: Appointment) {
 }
 
 function overlapsBlock(appointment: Appointment, block: DoctorBlockedTime) {
+  if (block.recurrenceType === 'weekly') {
+    if (block.dayOfWeek === undefined || !block.startTime || !block.endTime) return false
+    const start = new Date(appointment.start)
+    const end = new Date(appointment.end)
+    if (start.getDay() !== block.dayOfWeek || end.getDay() !== block.dayOfWeek) return false
+    const startMinutes = start.getHours() * 60 + start.getMinutes()
+    const endMinutes = end.getHours() * 60 + end.getMinutes()
+    return startMinutes < timeToMinutes(block.endTime) && timeToMinutes(block.startTime) < endMinutes
+  }
   return new Date(appointment.start) < new Date(block.end) && new Date(block.start) < new Date(appointment.end)
+}
+
+function timeToMinutes(value: string) {
+  const [hour, minute] = value.split(':').map(Number)
+  return hour * 60 + minute
 }
 
 export function DataProvider({ children }: { children: React.ReactNode }) {

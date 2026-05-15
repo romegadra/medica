@@ -26,6 +26,7 @@ import LockResetIcon from '@mui/icons-material/LockReset'
 import { useEffect, useMemo, useState } from 'react'
 import { apiRequest } from '../api/client'
 import { useAuth } from '../auth/AuthContext'
+import DoctorBlockedTimeManager from '../components/DoctorBlockedTimeManager'
 import DoctorScheduleManager from '../components/DoctorScheduleManager'
 import { useToast } from '../components/ToastProvider'
 import { useData } from '../data/DataContext'
@@ -387,7 +388,10 @@ function AdminDoctors() {
               ))}
             </TextField>
             {editingDoctor && (
-              <DoctorScheduleManager doctorId={editingDoctor.id} />
+              <>
+                <DoctorScheduleManager doctorId={editingDoctor.id} />
+                <DoctorBlockedTimeManager doctorId={editingDoctor.id} />
+              </>
             )}
           </Stack>
         </DialogContent>

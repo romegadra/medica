@@ -95,6 +95,10 @@ export type DoctorBlockedTime = {
   start: string
   end: string
   reason?: string
+  recurrenceType?: 'date' | 'weekly'
+  dayOfWeek?: number
+  startTime?: string
+  endTime?: string
 }
 
 export type Constraints = {

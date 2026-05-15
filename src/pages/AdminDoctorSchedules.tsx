@@ -1,6 +1,7 @@
 import { Box, MenuItem, Stack, TextField, Typography } from '@mui/material'
 import { useEffect, useMemo, useState } from 'react'
 import { useAuth } from '../auth/AuthContext'
+import DoctorBlockedTimeManager from '../components/DoctorBlockedTimeManager'
 import DoctorScheduleManager from '../components/DoctorScheduleManager'
 import { useData } from '../data/DataContext'
 
@@ -45,7 +46,12 @@ function AdminDoctorSchedules() {
         ))}
       </TextField>
 
-      {doctorId && <DoctorScheduleManager doctorId={doctorId} />}
+      {doctorId && (
+        <>
+          <DoctorScheduleManager doctorId={doctorId} />
+          <DoctorBlockedTimeManager doctorId={doctorId} />
+        </>
+      )}
     </Stack>
   )
 }

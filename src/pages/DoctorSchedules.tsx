@@ -1,5 +1,6 @@
 import { Alert, Box, Stack, Typography } from '@mui/material'
 import { useAuth } from '../auth/AuthContext'
+import DoctorBlockedTimeManager from '../components/DoctorBlockedTimeManager'
 import DoctorScheduleManager from '../components/DoctorScheduleManager'
 import { useData } from '../data/DataContext'
 
@@ -24,6 +25,7 @@ function DoctorSchedules() {
       </Box>
 
       <DoctorScheduleManager doctorId={doctorId} />
+      <DoctorBlockedTimeManager doctorId={doctorId} />
     </Stack>
   )
 }

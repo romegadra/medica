@@ -197,25 +197,52 @@ function ReceptionistDashboard() {
       title: appointment.title,
       start: appointment.start,
       end: appointment.end,
-      backgroundColor: appointment.attended ? '#2e7d32' : undefined,
-      borderColor: appointment.attended ? '#2e7d32' : undefined,
-      textColor: appointment.attended ? '#fff' : undefined,
+      backgroundColor: appointment.attended
+        ? '#2e7d32'
+        : new Date(appointment.end) < new Date()
+          ? '#c65f2f'
+          : undefined,
+      borderColor: appointment.attended
+        ? '#2e7d32'
+        : new Date(appointment.end) < new Date()
+          ? '#c65f2f'
+          : undefined,
+      textColor: appointment.attended || new Date(appointment.end) < new Date() ? '#fff' : undefined,
     }))
-    const blockEvents = selectedDoctorBlocks.map((block) => ({
-      id: `block-${block.id}`,
-      title: block.reason ? `Bloqueado: ${block.reason}` : 'Bloqueado',
-      start: block.start,
-      end: block.end,
-      display: 'background',
-      color: '#ef5350',
-    }))
+    const blockEvents = selectedDoctorBlocks.map((block) =>
+      block.recurrenceType === 'weekly'
+        ? {
+            id: `block-${block.id}`,
+            title: block.reason ? `Bloqueado: ${block.reason}` : 'Bloqueado',
+            daysOfWeek: [block.dayOfWeek],
+            startTime: block.startTime,
+            endTime: block.endTime,
+            display: 'background',
+            color: '#ef5350',
+          }
+        : {
+            id: `block-${block.id}`,
+            title: block.reason ? `Bloqueado: ${block.reason}` : 'Bloqueado',
+            start: block.start,
+            end: block.end,
+            display: 'background',
+            color: '#ef5350',
+          },
+    )
     return [...appointmentEvents, ...blockEvents]
   }, [appointments, doctorId, patientFilterId, patientFilterText, doctorPatients, selectedDoctorBlocks])
 
   const overlapsBlock = (start: Date, end: Date) =>
-    selectedDoctorBlocks.some(
-      (block) => start < new Date(block.end) && new Date(block.start) < end,
-    )
+    selectedDoctorBlocks.some((block) => {
+      if (block.recurrenceType === 'weekly') {
+        if (block.dayOfWeek === undefined || !block.startTime || !block.endTime) return false
+        if (start.getDay() !== block.dayOfWeek || end.getDay() !== block.dayOfWeek) return false
+        const startMinutes = start.getHours() * 60 + start.getMinutes()
+        const endMinutes = end.getHours() * 60 + end.getMinutes()
+        return startMinutes < timeToMinutes(block.endTime) && timeToMinutes(block.startTime) < endMinutes
+      }
+      return start < new Date(block.end) && new Date(block.start) < end
+    })
 
   const handleSelect = (info: { startStr: string; endStr: string }) => {
     if (!doctorId) {
