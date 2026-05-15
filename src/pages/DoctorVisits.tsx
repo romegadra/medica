@@ -18,6 +18,7 @@ import {
 } from '@mui/material'
 import { useEffect, useMemo, useState } from 'react'
 import { useAuth } from '../auth/AuthContext'
+import PatientClinicalSummary from '../components/PatientClinicalSummary'
 import { useData } from '../data/DataContext'
 
 function DoctorVisits() {
@@ -60,6 +61,8 @@ function DoctorVisits() {
       ),
     [visits, doctorId, patientId],
   )
+  const specialtyName = specialties.find((item) => item.id === template?.specialtyId)?.name
+  const selectedPatient = doctorPatients.find((patient) => patient.id === patientId)
 
   const handleSave = () => {
     if (!doctorId || !patientId || !template) return
@@ -85,6 +88,13 @@ function DoctorVisits() {
           Registra la consulta segun la especialidad del doctor.
         </Typography>
       </Box>
+
+      <PatientClinicalSummary
+        patient={selectedPatient}
+        specialtyName={specialtyName}
+        template={template}
+        visits={patientVisits}
+      />
 
       <Paper sx={{ p: 3 }} elevation={2}>
         <Stack spacing={2}>

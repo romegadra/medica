@@ -61,6 +61,24 @@ function getDateKey(value: string) {
   return value.slice(0, 10)
 }
 
+function getNumericVisitFields(visits: { responses: Record<string, string> }[]) {
+  const grouped = new Map<string, number[]>()
+  visits.forEach((visit) => {
+    Object.entries(visit.responses).forEach(([key, value]) => {
+      const parsed = Number(value)
+      if (!Number.isFinite(parsed)) return
+      grouped.set(key, [...(grouped.get(key) ?? []), parsed])
+    })
+  })
+  return [...grouped.entries()].map(([key, values]) => ({
+    key,
+    average: values.reduce((total, value) => total + value, 0) / values.length,
+    min: Math.min(...values),
+    max: Math.max(...values),
+    count: values.length,
+  }))
+}
+
 function DoctorReports() {
   const { doctorId } = useAuth()
   const { doctors, patients, appointments, visits } = useData()
@@ -155,6 +173,8 @@ function DoctorReports() {
       })
     return [...grouped.entries()]
   }, [scopedAppointments])
+
+  const numericVisitFields = useMemo(() => getNumericVisitFields(scopedVisits), [scopedVisits])
 
   const setCurrentMonth = () => {
     setStartDate(toDateInput(startOfMonth(today)))
@@ -300,6 +320,39 @@ function DoctorReports() {
           </Stack>
         </Paper>
       </Stack>
+
+      <Paper sx={{ p: 3 }} elevation={2}>
+        <Stack spacing={2}>
+          <Typography variant="h6">Indicadores clínicos capturados</Typography>
+          <Table size="small">
+            <TableHead>
+              <TableRow>
+                <TableCell>Campo</TableCell>
+                <TableCell>Promedio</TableCell>
+                <TableCell>Mínimo</TableCell>
+                <TableCell>Máximo</TableCell>
+                <TableCell>Registros</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {numericVisitFields.map((field) => (
+                <TableRow key={field.key}>
+                  <TableCell>{field.key}</TableCell>
+                  <TableCell>{field.average.toFixed(1)}</TableCell>
+                  <TableCell>{field.min}</TableCell>
+                  <TableCell>{field.max}</TableCell>
+                  <TableCell>{field.count}</TableCell>
+                </TableRow>
+              ))}
+              {numericVisitFields.length === 0 && (
+                <TableRow>
+                  <TableCell colSpan={5}>Sin indicadores numéricos en el periodo.</TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </Stack>
+      </Paper>
     </Stack>
   )
 }
