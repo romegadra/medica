@@ -127,6 +127,10 @@ function ReceptionistDashboard() {
     () => patients.filter((patient) => patient.doctorId === doctorId),
     [patients, doctorId],
   )
+  const selectedPatient = useMemo(
+    () => doctorPatients.find((patient) => patient.id === patientId),
+    [doctorPatients, patientId],
+  )
 
   const activeAppointments = useMemo(
     () =>
@@ -628,6 +632,18 @@ function ReceptionistDashboard() {
                   </MenuItem>
                 ))}
               </TextField>
+            )}
+            {!addingPatient && selectedPatient && (
+              <Paper sx={{ p: 1.5 }} elevation={0}>
+                <Stack spacing={0.5}>
+                  <Typography variant="caption" color="text.secondary">
+                    Teléfono del paciente
+                  </Typography>
+                  <Typography variant="body1" sx={{ fontWeight: 700 }}>
+                    {selectedPatient.phone || 'Sin teléfono registrado'}
+                  </Typography>
+                </Stack>
+              </Paper>
             )}
             {mode === 'create' && (
               <>
