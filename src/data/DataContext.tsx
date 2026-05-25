@@ -41,7 +41,7 @@ type DataState = {
   addDoctor: (doctor: Doctor) => void
   updateDoctor: (doctor: Doctor) => void
   removeDoctor: (id: string) => void
-  addPatient: (patient: Patient) => void
+  addPatient: (patient: Patient) => Promise<Patient>
   updatePatient: (patient: Patient) => void
   removePatient: (id: string) => void
   addAppointment: (appointment: Appointment) => Promise<{ ok: boolean; reason?: string }>
@@ -255,11 +255,10 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
           setVisitList((prev) => prev.filter((item) => item.doctorId !== id))
         })()
       },
-      addPatient: (patient) => {
-        void (async () => {
-          const created = await apiRequest<Patient>('/patients', 'POST', patient)
-          setPatientList((prev) => [...prev, created])
-        })()
+      addPatient: async (patient) => {
+        const created = await apiRequest<Patient>('/patients', 'POST', patient)
+        setPatientList((prev) => [...prev.filter((item) => item.id !== created.id), created])
+        return created
       },
       updatePatient: (patient) => {
         void (async () => {

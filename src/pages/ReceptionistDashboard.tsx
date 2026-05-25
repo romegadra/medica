@@ -288,14 +288,15 @@ function ReceptionistDashboard() {
         setError('Ingresa un nombre para el nuevo paciente.')
         return
       }
-      finalPatientId = `pat-${Date.now()}`
       finalPatientName = newPatientName.trim()
-      addPatient({
-        id: finalPatientId,
+      const createdPatient = await addPatient({
+        id: `pat-${Date.now()}`,
         doctorId,
         name: finalPatientName,
         phone: newPatientPhone.trim() || undefined,
       })
+      finalPatientId = createdPatient.id
+      finalPatientName = createdPatient.name
     }
 
     const patientName =
@@ -722,7 +723,11 @@ function ReceptionistDashboard() {
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setDialogOpen(false)}>Cancelar</Button>
-          <Button variant="contained" onClick={handleSave} disabled={!patientId}>
+          <Button
+            variant="contained"
+            onClick={handleSave}
+            disabled={addingPatient ? !newPatientName.trim() : !patientId}
+          >
             {mode === 'edit' ? 'Actualizar' : 'Guardar'}
           </Button>
         </DialogActions>
