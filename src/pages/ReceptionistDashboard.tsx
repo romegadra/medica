@@ -238,6 +238,10 @@ function ReceptionistDashboard() {
         title,
         start: appointment.start,
         end: appointment.end,
+        extendedProps: {
+          patientName: appointment.title,
+          patientPhone: patient?.phone ?? '',
+        },
         backgroundColor: getAppointmentColor(appointment),
         borderColor: getAppointmentColor(appointment),
         textColor: getAppointmentColor(appointment) ? '#fff' : undefined,
@@ -499,6 +503,30 @@ function ReceptionistDashboard() {
           selectable
           editable
           events={events}
+          eventContent={(info) => {
+            const patientName = String(info.event.extendedProps.patientName || info.event.title)
+            const patientPhone = String(info.event.extendedProps.patientPhone || '')
+            return (
+              <Box sx={{ lineHeight: 1.15, overflow: 'hidden' }}>
+                <Typography
+                  component="div"
+                  variant="caption"
+                  sx={{ fontWeight: 700, color: 'inherit', whiteSpace: 'normal' }}
+                >
+                  {patientName}
+                </Typography>
+                {patientPhone && (
+                  <Typography
+                    component="div"
+                    variant="caption"
+                    sx={{ color: 'inherit', whiteSpace: 'normal' }}
+                  >
+                    {patientPhone}
+                  </Typography>
+                )}
+              </Box>
+            )
+          }}
           datesSet={(info) => setCalendarTitle(info.view.title)}
           select={handleSelect}
           dateClick={(info) => {
