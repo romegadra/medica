@@ -1,14 +1,31 @@
-import { Box, Button, Divider, Paper, Stack, Switch, TextField, Typography } from '@mui/material'
+import { Alert, Box, Button, Divider, Paper, Stack, Switch, TextField, Typography } from '@mui/material'
 import { Link } from 'react-router-dom'
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useData } from '../data/DataContext'
 
 function AdminDashboard() {
   const { constraints, updateConstraints, doctors, patients, units } = useData()
   const [form, setForm] = useState(constraints)
+  const [saveMessage, setSaveMessage] = useState<string | null>(null)
+  const [saveError, setSaveError] = useState<string | null>(null)
+
+  useEffect(() => {
+    setForm(constraints)
+  }, [constraints])
 
   const handleChange = (field: keyof typeof form, value: number | boolean) => {
     setForm((prev) => ({ ...prev, [field]: value }))
+  }
+
+  const handleSave = async () => {
+    setSaveMessage(null)
+    setSaveError(null)
+    const result = await updateConstraints(form)
+    if (!result.ok) {
+      setSaveError(result.reason ?? 'No se pudieron guardar las restricciones.')
+      return
+    }
+    setSaveMessage('Restricciones guardadas correctamente.')
   }
 
   const unitSummary = useMemo(() => {
@@ -71,7 +88,9 @@ function AdminDashboard() {
             />
             <Typography variant="body2">Permitir citas traslapadas</Typography>
           </Stack>
-          <Button variant="contained" onClick={() => updateConstraints(form)}>
+          {saveError && <Alert severity="error">{saveError}</Alert>}
+          {saveMessage && <Alert severity="success">{saveMessage}</Alert>}
+          <Button variant="contained" onClick={handleSave}>
             Guardar restricciones
           </Button>
         </Stack>

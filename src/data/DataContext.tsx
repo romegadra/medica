@@ -53,13 +53,33 @@ type DataState = {
   addAppointment: (appointment: Appointment) => Promise<{ ok: boolean; reason?: string }>
   updateAppointment: (appointment: Appointment) => Promise<{ ok: boolean; reason?: string }>
   removeAppointment: (id: string) => void
-  updateConstraints: (next: Constraints) => void
+  updateConstraints: (next: Constraints) => Promise<{ ok: boolean; reason?: string }>
 }
 
 const DataContext = createContext<DataState | undefined>(undefined)
 
 function overlaps(a: Appointment, b: Appointment) {
   return new Date(a.start) < new Date(b.end) && new Date(b.start) < new Date(a.end)
+}
+
+function timeToMinutes(value: string) {
+  const [hour, minute] = value.split(':').map(Number)
+  return hour * 60 + minute
+}
+
+function overlapsBlockedTime(appointment: Appointment, block: DoctorBlockedTime) {
+  const start = new Date(appointment.start)
+  const end = new Date(appointment.end)
+
+  if (block.recurrenceType === 'weekly') {
+    if (block.dayOfWeek === undefined || !block.startTime || !block.endTime) return false
+    if (start.getDay() !== block.dayOfWeek || end.getDay() !== block.dayOfWeek) return false
+    const startMinutes = start.getHours() * 60 + start.getMinutes()
+    const endMinutes = end.getHours() * 60 + end.getMinutes()
+    return startMinutes < timeToMinutes(block.endTime) && timeToMinutes(block.startTime) < endMinutes
+  }
+
+  return start < new Date(block.end) && new Date(block.start) < end
 }
 
 export function DataProvider({ children }: { children: React.ReactNode }) {
@@ -96,6 +116,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
           receptionistsResponse,
           specialtiesResponse,
           templatesResponse,
+          settingsResponse,
           appointmentsResponse,
           visitsResponse,
         ] = await Promise.all([
@@ -107,6 +128,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
           apiRequest<Receptionist[]>('/receptionists'),
           apiRequest<Specialty[]>('/specialties'),
           apiRequest<SpecialtyTemplate[]>('/templates'),
+          apiRequest<Constraints>('/settings'),
           apiRequest<Appointment[]>('/appointments'),
           apiRequest<VisitEntry[]>('/visits'),
         ])
@@ -119,6 +141,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         setReceptionistList(receptionistsResponse)
         setSpecialtyList(specialtiesResponse)
         setTemplateList(templatesResponse)
+        setConstraints(settingsResponse)
         setAppointments(appointmentsResponse)
         setVisitList(visitsResponse)
       } catch (err) {
@@ -315,6 +338,14 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         })()
       },
       addAppointment: async (appointment) => {
+        const blocked = doctorBlockedTimeList.some(
+          (block) =>
+            block.doctorId === appointment.doctorId && overlapsBlockedTime(appointment, block),
+        )
+        if (blocked) {
+          return { ok: false, reason: 'La cita se cruza con un horario bloqueado.' }
+        }
+
         if (!constraints.allowOverlap) {
           const conflict = appointments.some(
             (existing) =>
@@ -339,6 +370,14 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         }
       },
       updateAppointment: async (appointment) => {
+        const blocked = doctorBlockedTimeList.some(
+          (block) =>
+            block.doctorId === appointment.doctorId && overlapsBlockedTime(appointment, block),
+        )
+        if (blocked) {
+          return { ok: false, reason: 'La cita se cruza con un horario bloqueado.' }
+        }
+
         if (!constraints.allowOverlap) {
           const conflict = appointments.some(
             (existing) =>
@@ -374,8 +413,15 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
           setAppointments((prev) => prev.filter((item) => item.id !== id))
         })()
       },
-      updateConstraints: (next) => {
-        setConstraints(next)
+      updateConstraints: async (next) => {
+        try {
+          const updated = await apiRequest<Constraints>('/settings', 'PUT', next)
+          setConstraints(updated)
+          return { ok: true }
+        } catch (err) {
+          const message = err instanceof Error ? err.message : 'Error al guardar restricciones'
+          return { ok: false, reason: message }
+        }
       },
     }),
     [

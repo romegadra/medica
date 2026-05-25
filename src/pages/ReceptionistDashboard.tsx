@@ -30,10 +30,10 @@ import {
 import { Link } from 'react-router-dom'
 import ArrowBackIcon from '@mui/icons-material/ArrowBack'
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useData } from '../data/DataContext'
 import { useAuth } from '../auth/AuthContext'
-import type { Appointment } from '../data/types'
+import type { Appointment, DoctorBlockedTime } from '../data/types'
 
 type CalendarView = 'timeGridWeek' | 'dayGridMonth'
 type DialogMode = 'create' | 'edit'
@@ -118,8 +118,20 @@ function isWithinSchedule(
   )
 }
 
+function overlapsBlockedTime(start: Date, end: Date, block: DoctorBlockedTime) {
+  if (block.recurrenceType === 'weekly') {
+    if (block.dayOfWeek === undefined || !block.startTime || !block.endTime) return false
+    if (start.getDay() !== block.dayOfWeek || end.getDay() !== block.dayOfWeek) return false
+    const startMinutes = start.getHours() * 60 + start.getMinutes()
+    const endMinutes = end.getHours() * 60 + end.getMinutes()
+    return startMinutes < timeToMinutes(block.endTime) && timeToMinutes(block.startTime) < endMinutes
+  }
+
+  return start < new Date(block.end) && new Date(block.start) < end
+}
+
 function ReceptionistDashboard() {
-  const { doctors, doctorSchedules, patients, units, appointments, constraints, addAppointment, updateAppointment, addPatient } =
+  const { doctors, doctorSchedules, doctorBlockedTimes, patients, units, appointments, constraints, addAppointment, updateAppointment, addPatient } =
     useData()
   const { unitId } = useAuth()
   const unitDoctors = useMemo(
@@ -171,6 +183,14 @@ function ReceptionistDashboard() {
   const selectedDoctorSchedules = useMemo(
     () => doctorSchedules.filter((schedule) => schedule.doctorId === doctorId),
     [doctorSchedules, doctorId],
+  )
+  const selectedDoctorBlocks = useMemo(
+    () => doctorBlockedTimes.filter((block) => block.doctorId === doctorId),
+    [doctorBlockedTimes, doctorId],
+  )
+  const isBlocked = useCallback(
+    (start: Date, end: Date) => selectedDoctorBlocks.some((block) => overlapsBlockedTime(start, end, block)),
+    [selectedDoctorBlocks],
   )
   const businessHours = useMemo(
     () =>
@@ -298,7 +318,7 @@ function ReceptionistDashboard() {
               ?.name
             return patientName ? patientName.toLowerCase().includes(normalized) : false
           })
-    return scoped.map((appointment) => {
+    const appointmentEvents = scoped.map((appointment) => {
       const patient = doctorPatients.find((item) => item.id === appointment.patientId)
       const title = patient?.phone ? `${appointment.title} · ${patient.phone}` : appointment.title
       return {
@@ -315,7 +335,31 @@ function ReceptionistDashboard() {
         textColor: getAppointmentColor(appointment) ? '#fff' : undefined,
       }
     })
-  }, [appointments, doctorId, patientFilterId, patientFilterText, doctorPatients])
+    const blockedEvents = selectedDoctorBlocks.map((block) => {
+      const title = block.reason ? `Bloqueado: ${block.reason}` : 'Bloqueado'
+      if (block.recurrenceType === 'weekly') {
+        return {
+          id: `blocked-${block.id}`,
+          title,
+          daysOfWeek: block.dayOfWeek === undefined ? [] : [block.dayOfWeek],
+          startTime: block.startTime,
+          endTime: block.endTime,
+          display: 'background',
+          color: '#ef9a9a',
+        }
+      }
+
+      return {
+        id: `blocked-${block.id}`,
+        title,
+        start: block.start,
+        end: block.end,
+        display: 'background',
+        color: '#ef9a9a',
+      }
+    })
+    return [...appointmentEvents, ...blockedEvents]
+  }, [appointments, doctorId, patientFilterId, patientFilterText, doctorPatients, selectedDoctorBlocks])
 
   const handleSelect = (info: { startStr: string; endStr: string }) => {
     if (!doctorId) {
@@ -371,6 +415,17 @@ function ReceptionistDashboard() {
     }
 
     const end = addMinutes(appointmentStart, durationMinutes)
+    const startDate = new Date(appointmentStart)
+    const endDate = new Date(end)
+    if (!isWithinSchedule(startDate, endDate, selectedDoctorSchedules)) {
+      setError('La cita está fuera del horario disponible del doctor.')
+      return
+    }
+    if (isBlocked(startDate, endDate)) {
+      setError('La cita se cruza con un horario bloqueado.')
+      return
+    }
+
     const appointment: Appointment = {
       id: mode === 'edit' && editingId ? editingId : `apt-${Date.now()}`,
       doctorId,
@@ -657,8 +712,14 @@ function ReceptionistDashboard() {
           businessHours={businessHours}
           selectConstraint="businessHours"
           eventConstraint="businessHours"
-          selectAllow={(info) => isWithinSchedule(info.start, info.end, selectedDoctorSchedules)}
-          eventAllow={(dropInfo) => isWithinSchedule(dropInfo.start, dropInfo.end, selectedDoctorSchedules)}
+          selectAllow={(info) =>
+            isWithinSchedule(info.start, info.end, selectedDoctorSchedules) &&
+            !isBlocked(info.start, info.end)
+          }
+          eventAllow={(dropInfo) =>
+            isWithinSchedule(dropInfo.start, dropInfo.end, selectedDoctorSchedules) &&
+            !isBlocked(dropInfo.start, dropInfo.end)
+          }
           eventOverlap={constraints.allowOverlap}
           selectOverlap={constraints.allowOverlap}
         />
