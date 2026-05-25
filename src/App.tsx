@@ -4,6 +4,7 @@ import { useAuth } from './auth/AuthContext'
 import ProtectedRoute from './components/ProtectedRoute'
 import AdminAudit from './pages/AdminAudit'
 import AdminDashboard from './pages/AdminDashboard'
+import AdminDoctorBlocks from './pages/AdminDoctorBlocks'
 import AdminDoctors from './pages/AdminDoctors'
 import AdminUnits from './pages/AdminUnits'
 import AdminReceptionists from './pages/AdminReceptionists'
@@ -86,6 +87,14 @@ function App() {
             element={
               <ProtectedRoute allowed={['superadmin', 'admin']}>
                 <AdminAudit />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/doctor-blocks"
+            element={
+              <ProtectedRoute allowed={['superadmin', 'admin']}>
+                <AdminDoctorBlocks />
               </ProtectedRoute>
             }
           />

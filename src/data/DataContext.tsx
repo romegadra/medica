@@ -3,6 +3,8 @@ import type {
   Appointment,
   Constraints,
   Doctor,
+  DoctorBlockedTime,
+  DoctorSchedule,
   Patient,
   Receptionist,
   Specialty,
@@ -14,6 +16,8 @@ import { apiRequest } from '../api/client'
 
 type DataState = {
   doctors: Doctor[]
+  doctorSchedules: DoctorSchedule[]
+  doctorBlockedTimes: DoctorBlockedTime[]
   patients: Patient[]
   units: Unit[]
   receptionists: Receptionist[]
@@ -41,6 +45,8 @@ type DataState = {
   addDoctor: (doctor: Doctor) => void
   updateDoctor: (doctor: Doctor) => void
   removeDoctor: (id: string) => void
+  addDoctorBlockedTime: (block: DoctorBlockedTime) => Promise<{ ok: boolean; reason?: string }>
+  removeDoctorBlockedTime: (id: string) => Promise<{ ok: boolean; reason?: string }>
   addPatient: (patient: Patient) => Promise<Patient>
   updatePatient: (patient: Patient) => void
   removePatient: (id: string) => void
@@ -66,6 +72,8 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   })
   const [unitList, setUnitList] = useState<Unit[]>([])
   const [doctorList, setDoctorList] = useState<Doctor[]>([])
+  const [doctorScheduleList, setDoctorScheduleList] = useState<DoctorSchedule[]>([])
+  const [doctorBlockedTimeList, setDoctorBlockedTimeList] = useState<DoctorBlockedTime[]>([])
   const [patientList, setPatientList] = useState<Patient[]>([])
   const [receptionistList, setReceptionistList] = useState<Receptionist[]>([])
   const [visitList, setVisitList] = useState<VisitEntry[]>([])
@@ -82,6 +90,8 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         const [
           unitsResponse,
           doctorsResponse,
+          doctorSchedulesResponse,
+          doctorBlockedTimesResponse,
           patientsResponse,
           receptionistsResponse,
           specialtiesResponse,
@@ -91,6 +101,8 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         ] = await Promise.all([
           apiRequest<Unit[]>('/units'),
           apiRequest<Doctor[]>('/doctors'),
+          apiRequest<DoctorSchedule[]>('/doctor-schedules'),
+          apiRequest<DoctorBlockedTime[]>('/doctor-blocks'),
           apiRequest<Patient[]>('/patients'),
           apiRequest<Receptionist[]>('/receptionists'),
           apiRequest<Specialty[]>('/specialties'),
@@ -101,6 +113,8 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
 
         setUnitList(unitsResponse)
         setDoctorList(doctorsResponse)
+        setDoctorScheduleList(doctorSchedulesResponse)
+        setDoctorBlockedTimeList(doctorBlockedTimesResponse)
         setPatientList(patientsResponse)
         setReceptionistList(receptionistsResponse)
         setSpecialtyList(specialtiesResponse)
@@ -122,6 +136,8 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   const value = useMemo<DataState>(
     () => ({
       doctors: doctorList,
+      doctorSchedules: doctorScheduleList,
+      doctorBlockedTimes: doctorBlockedTimeList,
       patients: patientList,
       units: unitList,
       receptionists: receptionistList,
@@ -174,6 +190,8 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
             .map((doctor) => doctor.id)
           setUnitList((prev) => prev.filter((item) => item.id !== id))
           setDoctorList((prev) => prev.filter((item) => item.unitId !== id))
+          setDoctorScheduleList((prev) => prev.filter((item) => !affectedDoctorIds.includes(item.doctorId)))
+          setDoctorBlockedTimeList((prev) => prev.filter((item) => !affectedDoctorIds.includes(item.doctorId)))
           setPatientList((prev) => prev.filter((item) => !affectedDoctorIds.includes(item.doctorId)))
           setAppointments((prev) => prev.filter((item) => !affectedDoctorIds.includes(item.doctorId)))
           setReceptionistList((prev) => prev.filter((item) => item.unitId !== id))
@@ -250,10 +268,32 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         void (async () => {
           await apiRequest<void>(`/doctors/${id}`, 'DELETE')
           setDoctorList((prev) => prev.filter((item) => item.id !== id))
+          setDoctorScheduleList((prev) => prev.filter((item) => item.doctorId !== id))
+          setDoctorBlockedTimeList((prev) => prev.filter((item) => item.doctorId !== id))
           setPatientList((prev) => prev.filter((item) => item.doctorId !== id))
           setAppointments((prev) => prev.filter((item) => item.doctorId !== id))
           setVisitList((prev) => prev.filter((item) => item.doctorId !== id))
         })()
+      },
+      addDoctorBlockedTime: async (block) => {
+        try {
+          const created = await apiRequest<DoctorBlockedTime>('/doctor-blocks', 'POST', block)
+          setDoctorBlockedTimeList((prev) => [...prev, created])
+          return { ok: true }
+        } catch (err) {
+          const message = err instanceof Error ? err.message : 'Error al bloquear horario'
+          return { ok: false, reason: message }
+        }
+      },
+      removeDoctorBlockedTime: async (id) => {
+        try {
+          await apiRequest<void>(`/doctor-blocks/${id}`, 'DELETE')
+          setDoctorBlockedTimeList((prev) => prev.filter((item) => item.id !== id))
+          return { ok: true }
+        } catch (err) {
+          const message = err instanceof Error ? err.message : 'Error al desbloquear horario'
+          return { ok: false, reason: message }
+        }
       },
       addPatient: async (patient) => {
         const created = await apiRequest<Patient>('/patients', 'POST', patient)
@@ -343,6 +383,8 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       constraints,
       unitList,
       doctorList,
+      doctorScheduleList,
+      doctorBlockedTimeList,
       patientList,
       receptionistList,
       visitList,

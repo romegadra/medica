@@ -39,6 +39,8 @@ type CalendarView = 'timeGridWeek' | 'dayGridMonth'
 type DialogMode = 'create' | 'edit'
 type AppointmentStatus = NonNullable<Appointment['status']>
 
+const dayLabels = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado']
+
 const appointmentStatuses: { value: AppointmentStatus; label: string }[] = [
   { value: 'pending', label: 'Pendiente' },
   { value: 'scheduled', label: 'Agendada' },
@@ -81,8 +83,30 @@ function diffMinutes(startIso: string, endIso: string) {
   return Math.max(0, Math.round((new Date(endIso).getTime() - new Date(startIso).getTime()) / 60000))
 }
 
+function timeToMinutes(value: string) {
+  const [hour, minute] = value.split(':').map(Number)
+  return hour * 60 + minute
+}
+
+function isWithinSchedule(
+  start: Date,
+  end: Date,
+  schedules: { dayOfWeek: number; startTime: string; endTime: string }[],
+) {
+  if (schedules.length === 0) return true
+  if (start.getDay() !== end.getDay()) return false
+  const startMinutes = start.getHours() * 60 + start.getMinutes()
+  const endMinutes = end.getHours() * 60 + end.getMinutes()
+  return schedules.some(
+    (schedule) =>
+      schedule.dayOfWeek === start.getDay() &&
+      startMinutes >= timeToMinutes(schedule.startTime) &&
+      endMinutes <= timeToMinutes(schedule.endTime),
+  )
+}
+
 function ReceptionistDashboard() {
-  const { doctors, patients, units, appointments, constraints, addAppointment, updateAppointment, addPatient } =
+  const { doctors, doctorSchedules, patients, units, appointments, constraints, addAppointment, updateAppointment, addPatient } =
     useData()
   const { unitId } = useAuth()
   const unitDoctors = useMemo(
@@ -131,6 +155,31 @@ function ReceptionistDashboard() {
     () => doctorPatients.find((patient) => patient.id === patientId),
     [doctorPatients, patientId],
   )
+  const selectedDoctorSchedules = useMemo(
+    () => doctorSchedules.filter((schedule) => schedule.doctorId === doctorId),
+    [doctorSchedules, doctorId],
+  )
+  const businessHours = useMemo(
+    () =>
+      selectedDoctorSchedules.length > 0
+        ? selectedDoctorSchedules.map((schedule) => ({
+            daysOfWeek: [schedule.dayOfWeek],
+            startTime: schedule.startTime,
+            endTime: schedule.endTime,
+          }))
+        : {
+            daysOfWeek: [0, 1, 2, 3, 4, 5, 6],
+            startTime: `${constraints.startHour.toString().padStart(2, '0')}:00`,
+            endTime: `${constraints.endHour.toString().padStart(2, '0')}:00`,
+          },
+    [constraints.endHour, constraints.startHour, selectedDoctorSchedules],
+  )
+  const scheduleSummary =
+    selectedDoctorSchedules.length > 0
+      ? selectedDoctorSchedules
+          .map((schedule) => `${dayLabels[schedule.dayOfWeek]} ${schedule.startTime}-${schedule.endTime}`)
+          .join(', ')
+      : `${constraints.startHour}:00-${constraints.endHour}:00`
 
   const activeAppointments = useMemo(
     () =>
@@ -370,7 +419,7 @@ function ReceptionistDashboard() {
               <ToggleButton value="dayGridMonth">Mes</ToggleButton>
             </ToggleButtonGroup>
             <Typography variant="body2" color="text.secondary">
-              Horario: {constraints.startHour}:00 - {constraints.endHour}:00
+              Horario: {scheduleSummary}
             </Typography>
             <Button component={Link} to="/reception/patients" variant="outlined" size="small">
               Agregar pacientes
@@ -587,12 +636,11 @@ function ReceptionistDashboard() {
           slotMinTime={`${constraints.startHour.toString().padStart(2, '0')}:00:00`}
           slotMaxTime={`${constraints.endHour.toString().padStart(2, '0')}:00:00`}
           slotDuration={`00:${constraints.slotMinutes.toString().padStart(2, '0')}:00`}
-          businessHours={{
-            daysOfWeek: [0, 1, 2, 3, 4, 5, 6],
-            startTime: `${constraints.startHour.toString().padStart(2, '0')}:00`,
-            endTime: `${constraints.endHour.toString().padStart(2, '0')}:00`,
-          }}
+          businessHours={businessHours}
           selectConstraint="businessHours"
+          eventConstraint="businessHours"
+          selectAllow={(info) => isWithinSchedule(info.start, info.end, selectedDoctorSchedules)}
+          eventAllow={(dropInfo) => isWithinSchedule(dropInfo.start, dropInfo.end, selectedDoctorSchedules)}
           eventOverlap={constraints.allowOverlap}
           selectOverlap={constraints.allowOverlap}
         />
