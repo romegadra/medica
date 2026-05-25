@@ -87,10 +87,10 @@ function ReceptionistPatients() {
     <Stack spacing={3}>
       <Box>
         <Typography variant="h4" component="h1" sx={{ fontWeight: 700 }}>
-          Agregar pacientes
+          Pacientes
         </Typography>
         <Typography variant="body2" color="text.secondary">
-          Asigna pacientes a un doctor para agilizar la agenda.
+          Agrega, edita o elimina pacientes asignados al doctor.
         </Typography>
       </Box>
 

@@ -83,6 +83,19 @@ function diffMinutes(startIso: string, endIso: string) {
   return Math.max(0, Math.round((new Date(endIso).getTime() - new Date(startIso).getTime()) / 60000))
 }
 
+function toDateTimeLocalValue(iso: string) {
+  if (!iso) return ''
+  const date = new Date(iso)
+  if (Number.isNaN(date.getTime())) return ''
+  const localDate = new Date(date.getTime() - date.getTimezoneOffset() * 60000)
+  return localDate.toISOString().slice(0, 16)
+}
+
+function fromDateTimeLocalValue(value: string) {
+  if (!value) return ''
+  return new Date(value).toISOString()
+}
+
 function timeToMinutes(value: string) {
   const [hour, minute] = value.split(':').map(Number)
   return hour * 60 + minute
@@ -269,7 +282,9 @@ function ReceptionistDashboard() {
   }, [appointments, doctors, globalSearch, patients, unitDoctors, unitId, units])
 
   const events = useMemo(() => {
-    const filtered = appointments.filter((appointment) => appointment.doctorId === doctorId)
+    const filtered = appointments.filter(
+      (appointment) => appointment.doctorId === doctorId && appointment.status !== 'cancelled',
+    )
     const byPatientId =
       patientFilterId === 'all'
         ? filtered
@@ -422,7 +437,7 @@ function ReceptionistDashboard() {
               Horario: {scheduleSummary}
             </Typography>
             <Button component={Link} to="/reception/patients" variant="outlined" size="small">
-              Agregar pacientes
+              Pacientes
             </Button>
             <Button component={Link} to="/reception/doctor-blocks" variant="outlined" size="small">
               Bloquear horarios
@@ -725,7 +740,20 @@ function ReceptionistDashboard() {
                 )}
               </>
             )}
-            <TextField label="Inicio" value={appointmentStart} disabled />
+            <TextField
+              label="Inicio"
+              type="datetime-local"
+              value={toDateTimeLocalValue(appointmentStart)}
+              onChange={(event) => {
+                const nextStart = fromDateTimeLocalValue(event.target.value)
+                setAppointmentStart(nextStart)
+                if (mode === 'edit') {
+                  setAppointmentStatus('rescheduled')
+                }
+              }}
+              InputLabelProps={{ shrink: true }}
+              inputProps={{ step: 60 }}
+            />
             <TextField
               label="Duración (minutos)"
               type="number"
@@ -735,8 +763,19 @@ function ReceptionistDashboard() {
             />
             <TextField
               label="Fin"
-              value={appointmentStart ? addMinutes(appointmentStart, durationMinutes) : ''}
-              disabled
+              type="datetime-local"
+              value={appointmentStart ? toDateTimeLocalValue(addMinutes(appointmentStart, durationMinutes)) : ''}
+              onChange={(event) => {
+                const nextEnd = fromDateTimeLocalValue(event.target.value)
+                if (appointmentStart && nextEnd) {
+                  setDurationMinutes(diffMinutes(appointmentStart, nextEnd))
+                  if (mode === 'edit') {
+                    setAppointmentStatus('rescheduled')
+                  }
+                }
+              }}
+              InputLabelProps={{ shrink: true }}
+              inputProps={{ step: 60 }}
             />
             <TextField
               label="Estado"
