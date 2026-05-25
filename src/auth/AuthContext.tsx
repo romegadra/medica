@@ -1,7 +1,7 @@
 import { createContext, useContext, useEffect, useMemo, useState } from 'react'
 import { apiRequest } from '../api/client'
 
-export type Role = 'admin' | 'receptionist' | 'doctor'
+export type Role = 'superadmin' | 'admin' | 'receptionist' | 'doctor'
 
 type AuthState = {
   role: Role | null
@@ -36,7 +36,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     const stored = window.localStorage.getItem(storageRoleKey) as Role | null
-    if (stored === 'admin' || stored === 'receptionist') {
+    if (stored === 'superadmin' || stored === 'admin' || stored === 'receptionist') {
       setRole(stored)
     }
     if (stored === 'doctor') {

@@ -2,6 +2,7 @@ import { Alert, AppBar, Box, Button, Container, LinearProgress, Toolbar, Typogra
 import { Link, Navigate, Route, Routes } from 'react-router-dom'
 import { useAuth } from './auth/AuthContext'
 import ProtectedRoute from './components/ProtectedRoute'
+import AdminAudit from './pages/AdminAudit'
 import AdminDashboard from './pages/AdminDashboard'
 import AdminDoctors from './pages/AdminDoctors'
 import AdminUnits from './pages/AdminUnits'
@@ -36,9 +37,9 @@ function App() {
             <Box sx={{ position: 'absolute', right: 0, display: 'flex', gap: 1 }}>
               <Button
                 component={Link}
-                to={role === 'admin' ? '/admin' : role === 'receptionist' ? '/reception' : '/doctor'}
+                to={role === 'admin' || role === 'superadmin' ? '/admin' : role === 'receptionist' ? '/reception' : '/doctor'}
               >
-                {role === 'admin' ? 'Admin' : role === 'receptionist' ? 'Recepción' : 'Doctor'}
+                {role === 'admin' || role === 'superadmin' ? 'Admin' : role === 'receptionist' ? 'Recepción' : 'Doctor'}
               </Button>
               <Button onClick={logout} color="inherit">
                 Salir
@@ -59,7 +60,7 @@ function App() {
           <Route
             path="/change-password"
             element={
-              <ProtectedRoute allowed={['admin', 'receptionist', 'doctor']}>
+              <ProtectedRoute allowed={['superadmin', 'admin', 'receptionist', 'doctor']}>
                 <ChangePassword />
               </ProtectedRoute>
             }
@@ -67,7 +68,7 @@ function App() {
           <Route
             path="/admin"
             element={
-              <ProtectedRoute allowed={['admin']}>
+              <ProtectedRoute allowed={['superadmin', 'admin']}>
                 <AdminDashboard />
               </ProtectedRoute>
             }
@@ -75,15 +76,23 @@ function App() {
           <Route
             path="/admin/doctors"
             element={
-              <ProtectedRoute allowed={['admin']}>
+              <ProtectedRoute allowed={['superadmin', 'admin']}>
                 <AdminDoctors />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/audit"
+            element={
+              <ProtectedRoute allowed={['superadmin', 'admin']}>
+                <AdminAudit />
               </ProtectedRoute>
             }
           />
           <Route
             path="/admin/units"
             element={
-              <ProtectedRoute allowed={['admin']}>
+              <ProtectedRoute allowed={['superadmin', 'admin']}>
                 <AdminUnits />
               </ProtectedRoute>
             }
@@ -91,7 +100,7 @@ function App() {
           <Route
             path="/admin/receptionists"
             element={
-              <ProtectedRoute allowed={['admin']}>
+              <ProtectedRoute allowed={['superadmin', 'admin']}>
                 <AdminReceptionists />
               </ProtectedRoute>
             }
@@ -99,7 +108,7 @@ function App() {
           <Route
             path="/admin/templates"
             element={
-              <ProtectedRoute allowed={['admin']}>
+              <ProtectedRoute allowed={['superadmin', 'admin']}>
                 <AdminTemplates />
               </ProtectedRoute>
             }
@@ -107,7 +116,7 @@ function App() {
           <Route
             path="/admin/specialties"
             element={
-              <ProtectedRoute allowed={['admin']}>
+              <ProtectedRoute allowed={['superadmin', 'admin']}>
                 <AdminSpecialties />
               </ProtectedRoute>
             }
@@ -160,7 +169,7 @@ function App() {
                   to={
                     mustChangePassword
                       ? '/change-password'
-                      : role === 'admin'
+                      : role === 'admin' || role === 'superadmin'
                         ? '/admin'
                         : role === 'receptionist'
                           ? '/reception'

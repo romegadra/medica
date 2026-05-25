@@ -73,6 +73,32 @@ export type Appointment = {
   title: string
   start: string
   end: string
+  status?: 'pending' | 'scheduled' | 'confirmed' | 'attended' | 'no_show' | 'cancelled' | 'rescheduled'
+  attended?: boolean
+  notes?: string
+  paymentType?: string
+  cancellationReason?: string
+  cancelledAt?: string
+}
+
+export type DoctorSchedule = {
+  id: string
+  doctorId: string
+  dayOfWeek: number
+  startTime: string
+  endTime: string
+}
+
+export type DoctorBlockedTime = {
+  id: string
+  doctorId: string
+  start: string
+  end: string
+  reason?: string
+  recurrenceType?: 'date' | 'weekly'
+  dayOfWeek?: number
+  startTime?: string
+  endTime?: string
 }
 
 export type Constraints = {
@@ -80,4 +106,18 @@ export type Constraints = {
   endHour: number
   slotMinutes: number
   allowOverlap: boolean
+}
+
+export type AuditLog = {
+  id: string
+  userId?: string
+  role?: string
+  unitId?: string
+  doctorId?: string
+  receptionistId?: string
+  action: string
+  entityType: string
+  entityId?: string
+  summary?: string
+  createdAt: string
 }

@@ -279,6 +279,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         if (!constraints.allowOverlap) {
           const conflict = appointments.some(
             (existing) =>
+              existing.status !== 'cancelled' &&
               existing.doctorId === appointment.doctorId && overlaps(existing, appointment),
           )
           if (conflict) {
@@ -302,6 +303,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         if (!constraints.allowOverlap) {
           const conflict = appointments.some(
             (existing) =>
+              existing.status !== 'cancelled' &&
               existing.id !== appointment.id &&
               existing.doctorId === appointment.doctorId &&
               overlaps(existing, appointment),

@@ -19,7 +19,12 @@ function ProtectedRoute({ allowed, children }: Props) {
   }
 
   if (!allowed.includes(role)) {
-    return <Navigate to={role === 'admin' ? '/admin' : role === 'receptionist' ? '/reception' : '/doctor'} replace />
+    return (
+      <Navigate
+        to={role === 'admin' || role === 'superadmin' ? '/admin' : role === 'receptionist' ? '/reception' : '/doctor'}
+        replace
+      />
+    )
   }
 
   return children

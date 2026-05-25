@@ -139,6 +139,18 @@ function AdminDashboard() {
 
       <Paper sx={{ p: 3 }} elevation={2}>
         <Stack spacing={2}>
+          <Typography variant="h6">Operación y seguridad</Typography>
+          <Typography variant="body2" color="text.secondary">
+            Revisa la bitácora de cambios de citas, pacientes y bloqueos de horario.
+          </Typography>
+          <Button component={Link} to="/admin/audit" variant="outlined">
+            Ver auditoría
+          </Button>
+        </Stack>
+      </Paper>
+
+      <Paper sx={{ p: 3 }} elevation={2}>
+        <Stack spacing={2}>
           <Typography variant="h6">Resumen metricas</Typography>
           <Divider />
           <Typography variant="body2" color="text.secondary">
