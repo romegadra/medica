@@ -16,6 +16,7 @@ import DoctorVisits from './pages/DoctorVisits'
 import ChangePassword from './pages/ChangePassword'
 import Login from './pages/Login'
 import ReceptionistDashboard from './pages/ReceptionistDashboard'
+import ReceptionistDoctorBlocks from './pages/ReceptionistDoctorBlocks'
 import ReceptionistPatients from './pages/ReceptionistPatients'
 import { useData } from './data/DataContext'
 import logo from './assets/MN-Logo.jpg'
@@ -135,6 +136,14 @@ function App() {
             element={
               <ProtectedRoute allowed={['receptionist']}>
                 <ReceptionistDashboard />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/reception/doctor-blocks"
+            element={
+              <ProtectedRoute allowed={['receptionist']}>
+                <ReceptionistDoctorBlocks />
               </ProtectedRoute>
             }
           />

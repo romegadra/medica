@@ -424,6 +424,9 @@ function ReceptionistDashboard() {
             <Button component={Link} to="/reception/patients" variant="outlined" size="small">
               Agregar pacientes
             </Button>
+            <Button component={Link} to="/reception/doctor-blocks" variant="outlined" size="small">
+              Bloquear horarios
+            </Button>
           </Stack>
           <TextField
             label="Búsqueda global"
