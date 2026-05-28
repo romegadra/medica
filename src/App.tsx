@@ -19,21 +19,36 @@ import ReceptionistDashboard from './pages/ReceptionistDashboard'
 import ReceptionistDoctorBlocks from './pages/ReceptionistDoctorBlocks'
 import ReceptionistPatients from './pages/ReceptionistPatients'
 import { useData } from './data/DataContext'
-import logo from './assets/MN-Logo.jpg'
+import defaultLogo from './assets/medflow-logo.svg'
 
 function App() {
-  const { role, logout, mustChangePassword } = useAuth()
-  const { loading, error, refresh } = useData()
+  const { role, logout, mustChangePassword, unitId, doctorId } = useAuth()
+  const { loading, error, refresh, units, doctors } = useData()
+  const currentUnitId = unitId ?? doctors.find((doctor) => doctor.id === doctorId)?.unitId
+  const currentUnit = units.find((unit) => unit.id === currentUnitId)
+  const logoUrl = currentUnit?.logoUrl
 
   return (
     <Box sx={{ minHeight: '100vh', bgcolor: 'background.default' }}>
       <AppBar position="static" color="transparent" elevation={0} sx={{ pt: 1 }}>
         <Toolbar sx={{ alignItems: 'center', minHeight: 64, position: 'relative', justifyContent: 'center' }}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-            <Box component="img" src={logo} alt="Medflow" sx={{ height: 80 }} />
-            <Typography variant="h6" sx={{ fontWeight: 600 }}>
-              Agenda Médica
-            </Typography>
+            <Box
+              component="img"
+              src={logoUrl || defaultLogo}
+              alt={currentUnit?.name ?? 'MedFlow'}
+              sx={{ height: 72, maxWidth: 180, objectFit: 'contain' }}
+            />
+            <Box>
+              <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                MedFlow
+              </Typography>
+              {currentUnit?.name && (
+                <Typography variant="caption" color="text.secondary">
+                  {currentUnit.name}
+                </Typography>
+              )}
+            </Box>
           </Box>
           {role && (
             <Box sx={{ position: 'absolute', right: 0, display: 'flex', gap: 1 }}>
@@ -53,7 +68,15 @@ function App() {
       {loading && <LinearProgress />}
       <Container sx={{ py: { xs: 4, md: 6 } }}>
         {error && (
-          <Alert severity="error" sx={{ mb: 3 }} onClose={refresh}>
+          <Alert
+            severity="warning"
+            sx={{ mb: 3 }}
+            action={
+              <Button color="inherit" size="small" onClick={refresh}>
+                Reintentar
+              </Button>
+            }
+          >
             {error}
           </Alert>
         )}

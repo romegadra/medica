@@ -22,7 +22,7 @@ import { useData } from '../data/DataContext'
 
 function DoctorVisits() {
   const { doctorId } = useAuth()
-  const { doctors, patients, specialtyTemplates, visits, addVisit, specialties } = useData()
+  const { doctors, patients, specialtyTemplates, visits, addVisit } = useData()
   const doctor = doctors.find((item) => item.id === doctorId)
   const template = specialtyTemplates.find((item) => item.specialtyId === doctor?.specialtyId)
   const canManageVisits = doctor?.canManageVisits ?? true
@@ -75,7 +75,7 @@ function DoctorVisits() {
           Consultas y seguimiento
         </Typography>
         <Typography variant="body2" color="text.secondary">
-          Registra la consulta segun la especialidad del doctor.
+          Registro de consulta.
         </Typography>
       </Box>
 
@@ -110,8 +110,9 @@ function DoctorVisits() {
           />
           {template ? (
             <>
+              <hr />
               <Typography variant="subtitle1">
-                {specialties.find((item) => item.id === template.specialtyId)?.name ?? 'Especialidad'}
+                Consulta actual:
               </Typography>
               <Stack spacing={2}>
                 {template.fields.map((field) => (

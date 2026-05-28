@@ -26,6 +26,7 @@ export type Unit = {
   address?: string
   phone?: string
   adminName?: string
+  logoUrl?: string
 }
 
 export type SpecialtyFieldType = 'text' | 'textarea' | 'number' | 'date'
