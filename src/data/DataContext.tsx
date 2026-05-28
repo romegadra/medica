@@ -13,6 +13,7 @@ import type {
   VisitEntry,
 } from './types'
 import { apiRequest } from '../api/client'
+import { normalizePhone } from '../utils/phone'
 
 type DataState = {
   doctors: Doctor[]
@@ -223,7 +224,10 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       },
       addReceptionist: (receptionist) => {
         void (async () => {
-          const created = await apiRequest<Receptionist>('/receptionists', 'POST', receptionist)
+          const created = await apiRequest<Receptionist>('/receptionists', 'POST', {
+            ...receptionist,
+            phone: normalizePhone(receptionist.phone) ?? '',
+          })
           setReceptionistList((prev) => [...prev, created])
         })()
       },
@@ -232,7 +236,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
           const updated = await apiRequest<Receptionist>(
             `/receptionists/${receptionist.id}`,
             'PUT',
-            receptionist,
+            { ...receptionist, phone: normalizePhone(receptionist.phone) ?? '' },
           )
           setReceptionistList((prev) =>
             prev.map((item) => (item.id === updated.id ? updated : item)),
@@ -277,13 +281,19 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       constraints,
       addDoctor: (doctor) => {
         void (async () => {
-          const created = await apiRequest<Doctor>('/doctors', 'POST', doctor)
+          const created = await apiRequest<Doctor>('/doctors', 'POST', {
+            ...doctor,
+            phone: normalizePhone(doctor.phone),
+          })
           setDoctorList((prev) => [...prev, created])
         })()
       },
       updateDoctor: (doctor) => {
         void (async () => {
-          const updated = await apiRequest<Doctor>(`/doctors/${doctor.id}`, 'PUT', doctor)
+          const updated = await apiRequest<Doctor>(`/doctors/${doctor.id}`, 'PUT', {
+            ...doctor,
+            phone: normalizePhone(doctor.phone),
+          })
           setDoctorList((prev) => prev.map((item) => (item.id === updated.id ? updated : item)))
         })()
       },
@@ -319,13 +329,19 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         }
       },
       addPatient: async (patient) => {
-        const created = await apiRequest<Patient>('/patients', 'POST', patient)
+        const created = await apiRequest<Patient>('/patients', 'POST', {
+          ...patient,
+          phone: normalizePhone(patient.phone),
+        })
         setPatientList((prev) => [...prev.filter((item) => item.id !== created.id), created])
         return created
       },
       updatePatient: (patient) => {
         void (async () => {
-          const updated = await apiRequest<Patient>(`/patients/${patient.id}`, 'PUT', patient)
+          const updated = await apiRequest<Patient>(`/patients/${patient.id}`, 'PUT', {
+            ...patient,
+            phone: normalizePhone(patient.phone),
+          })
           setPatientList((prev) => prev.map((item) => (item.id === updated.id ? updated : item)))
         })()
       },
