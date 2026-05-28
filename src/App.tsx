@@ -3,6 +3,7 @@ import { Link, Navigate, Route, Routes } from 'react-router-dom'
 import { useAuth } from './auth/AuthContext'
 import ProtectedRoute from './components/ProtectedRoute'
 import AdminAudit from './pages/AdminAudit'
+import About from './pages/About'
 import AdminDashboard from './pages/AdminDashboard'
 import AdminDoctorBlocks from './pages/AdminDoctorBlocks'
 import AdminDoctors from './pages/AdminDoctors'
@@ -82,6 +83,7 @@ function App() {
         )}
         <Routes>
           <Route path="/login" element={<Login />} />
+          <Route path="/about" element={<About />} />
           <Route
             path="/change-password"
             element={
@@ -219,7 +221,7 @@ function App() {
                   replace
                 />
               ) : (
-                <Navigate to="/login" replace />
+                <About />
               )
             }
           />

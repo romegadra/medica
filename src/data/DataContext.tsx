@@ -13,6 +13,7 @@ import type {
   VisitEntry,
 } from './types'
 import { apiRequest } from '../api/client'
+import { useAuth } from '../auth/AuthContext'
 import { normalizePhone } from '../utils/phone'
 
 type DataState = {
@@ -84,6 +85,7 @@ function overlapsBlockedTime(appointment: Appointment, block: DoctorBlockedTime)
 }
 
 export function DataProvider({ children }: { children: React.ReactNode }) {
+  const { token } = useAuth()
   const [appointments, setAppointments] = useState<Appointment[]>([])
   const [constraints, setConstraints] = useState<Constraints>({
     startHour: 8,
@@ -104,6 +106,12 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   const [error, setError] = useState<string | null>(null)
 
   const refresh = useCallback(() => {
+    if (!token) {
+      setLoading(false)
+      setError(null)
+      return
+    }
+
     void (async () => {
       setLoading(true)
       setError(null)
@@ -151,7 +159,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         setLoading(false)
       }
     })()
-  }, [])
+  }, [token])
 
   useEffect(() => {
     refresh()
