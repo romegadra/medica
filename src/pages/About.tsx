@@ -66,9 +66,8 @@ function About() {
               Contacto
             </Typography>
             <Box>
-              <Typography color="text.secondary">Rodrigo Medina</Typography>
-              <Typography color="text.secondary">Durango, México</Typography>
-              <Typography color="text.secondary">Teléfono: +52 618 176 8904</Typography>
+              <Typography color="text.secondary">MedFlow</Typography>
+              <Typography color="text.secondary">México</Typography>
               <Typography color="text.secondary">Correo: contacto@medflow.center</Typography>
               <Typography color="text.secondary">Sitio web: https://medflow.center</Typography>
             </Box>
