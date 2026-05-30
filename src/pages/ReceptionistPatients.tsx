@@ -23,6 +23,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useData } from '../data/DataContext'
 import { useAuth } from '../auth/AuthContext'
 import type { Patient } from '../data/types'
+import ReceptionistTabs from '../components/ReceptionistTabs'
 
 function ReceptionistPatients() {
   const { doctors, patients, addPatient, updatePatient, removePatient } = useData()
@@ -87,12 +88,14 @@ function ReceptionistPatients() {
     <Stack spacing={3}>
       <Box>
         <Typography variant="h4" component="h1" sx={{ fontWeight: 700 }}>
-          Agregar pacientes
+          Pacientes
         </Typography>
         <Typography variant="body2" color="text.secondary">
-          Asigna pacientes a un doctor para agilizar la agenda.
+          Agrega, edita o elimina pacientes asignados al doctor.
         </Typography>
       </Box>
+
+      <ReceptionistTabs />
 
       <Paper sx={{ p: 3 }} elevation={2}>
         <Stack spacing={2}>
@@ -136,38 +139,40 @@ function ReceptionistPatients() {
         </Stack>
       </Paper>
 
-      <Paper sx={{ p: 3 }} elevation={2}>
+      <Paper sx={{ p: { xs: 2, md: 3 }, overflow: 'hidden' }} elevation={2}>
         <Stack spacing={1}>
           <Typography variant="h6">Pacientes de este doctor</Typography>
-          <Table size="small">
-            <TableHead>
-              <TableRow>
-                <TableCell>Paciente</TableCell>
-                <TableCell>Teléfono</TableCell>
-                <TableCell>Dirección</TableCell>
-                <TableCell>Fecha historial</TableCell>
-                <TableCell align="right">Acciones</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {doctorPatients.map((patient) => (
-                <TableRow key={patient.id}>
-                  <TableCell>{patient.name}</TableCell>
-                  <TableCell>{patient.phone ?? '-'}</TableCell>
-                  <TableCell>{patient.address ?? '-'}</TableCell>
-                  <TableCell>{patient.historyDate ?? '-'}</TableCell>
-                  <TableCell align="right">
-                    <IconButton size="small" onClick={() => setEditingPatient(patient)}>
-                      <EditIcon fontSize="small" />
-                    </IconButton>
-                    <IconButton size="small" onClick={() => setDeletePatient(patient)}>
-                      <DeleteIcon fontSize="small" />
-                    </IconButton>
-                  </TableCell>
+          <Box sx={{ width: '100%', overflowX: 'auto' }}>
+            <Table size="small" sx={{ minWidth: 680 }}>
+              <TableHead>
+                <TableRow>
+                  <TableCell>Paciente</TableCell>
+                  <TableCell>Teléfono</TableCell>
+                  <TableCell>Dirección</TableCell>
+                  <TableCell>Fecha historial</TableCell>
+                  <TableCell align="right">Acciones</TableCell>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHead>
+              <TableBody>
+                {doctorPatients.map((patient) => (
+                  <TableRow key={patient.id}>
+                    <TableCell>{patient.name}</TableCell>
+                    <TableCell>{patient.phone ?? '-'}</TableCell>
+                    <TableCell>{patient.address ?? '-'}</TableCell>
+                    <TableCell>{patient.historyDate ?? '-'}</TableCell>
+                    <TableCell align="right">
+                      <IconButton size="small" onClick={() => setEditingPatient(patient)}>
+                        <EditIcon fontSize="small" />
+                      </IconButton>
+                      <IconButton size="small" onClick={() => setDeletePatient(patient)}>
+                        <DeleteIcon fontSize="small" />
+                      </IconButton>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </Box>
         </Stack>
       </Paper>
 

@@ -30,7 +30,7 @@ function Login() {
       navigate('/change-password', { replace: true })
       return
     }
-    navigate(role === 'admin' ? '/admin' : role === 'receptionist' ? '/reception' : '/doctor', {
+    navigate(role === 'admin' || role === 'superadmin' ? '/admin' : role === 'receptionist' ? '/reception' : '/doctor', {
       replace: true,
     })
   }, [mustChangePassword, navigate, role])

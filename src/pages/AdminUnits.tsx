@@ -20,16 +20,20 @@ import {
 import DeleteIcon from '@mui/icons-material/Delete'
 import EditIcon from '@mui/icons-material/Edit'
 import { useState } from 'react'
+import { useAuth } from '../auth/AuthContext'
 import { useData } from '../data/DataContext'
 import type { Unit } from '../data/types'
 
 function AdminUnits() {
+  const { role, unitId } = useAuth()
   const { units, addUnit, updateUnit, removeUnit } = useData()
+  const canManageUnits = role === 'superadmin' || (role === 'admin' && !unitId)
   const [name, setName] = useState('')
   const [type, setType] = useState<'clinic' | 'individual'>('clinic')
   const [address, setAddress] = useState('')
   const [phone, setPhone] = useState('')
   const [adminName, setAdminName] = useState('')
+  const [logoUrl, setLogoUrl] = useState('')
   const [editingUnit, setEditingUnit] = useState<Unit | null>(null)
   const [deleteUnit, setDeleteUnit] = useState<Unit | null>(null)
 
@@ -43,12 +47,14 @@ function AdminUnits() {
       address: address.trim() || undefined,
       phone: phone.trim() || undefined,
       adminName: adminName.trim() || undefined,
+      logoUrl: logoUrl.trim() || undefined,
     })
     setName('')
     setType('clinic')
     setAddress('')
     setPhone('')
     setAdminName('')
+    setLogoUrl('')
   }
 
   const handleEditSave = () => {
@@ -61,6 +67,7 @@ function AdminUnits() {
       address: editingUnit.address?.trim() || undefined,
       phone: editingUnit.phone?.trim() || undefined,
       adminName: editingUnit.adminName?.trim() || undefined,
+      logoUrl: editingUnit.logoUrl?.trim() || undefined,
     })
     setEditingUnit(null)
   }
@@ -82,77 +89,102 @@ function AdminUnits() {
         </Typography>
       </Box>
 
-      <Paper sx={{ p: 3 }} elevation={2}>
-        <Stack spacing={2}>
-          <TextField
-            label="Nombre de la unidad"
-            value={name}
-            onChange={(event) => setName(event.target.value)}
-          />
-          <TextField
-            label="Tipo"
-            select
-            value={type}
-            onChange={(event) => setType(event.target.value as 'clinic' | 'individual')}
-          >
-            <MenuItem value="clinic">Clínica</MenuItem>
-            <MenuItem value="individual">Individual</MenuItem>
-          </TextField>
-          <TextField
-            label="Dirección"
-            value={address}
-            onChange={(event) => setAddress(event.target.value)}
-          />
-          <TextField
-            label="Teléfono"
-            value={phone}
-            onChange={(event) => setPhone(event.target.value)}
-          />
-          <TextField
-            label="Admin"
-            value={adminName}
-            onChange={(event) => setAdminName(event.target.value)}
-          />
-          <Button variant="contained" onClick={handleAdd} disabled={!name.trim()}>
-            Agregar unidad
-          </Button>
-        </Stack>
-      </Paper>
+      {canManageUnits && (
+        <Paper sx={{ p: 3 }} elevation={2}>
+          <Stack spacing={2}>
+            <TextField
+              label="Nombre de la unidad"
+              value={name}
+              onChange={(event) => setName(event.target.value)}
+            />
+            <TextField
+              label="Tipo"
+              select
+              value={type}
+              onChange={(event) => setType(event.target.value as 'clinic' | 'individual')}
+            >
+              <MenuItem value="clinic">Clínica</MenuItem>
+              <MenuItem value="individual">Individual</MenuItem>
+            </TextField>
+            <TextField
+              label="Dirección"
+              value={address}
+              onChange={(event) => setAddress(event.target.value)}
+            />
+            <TextField
+              label="Teléfono"
+              value={phone}
+              onChange={(event) => setPhone(event.target.value)}
+            />
+            <TextField
+              label="Admin"
+              value={adminName}
+              onChange={(event) => setAdminName(event.target.value)}
+            />
+            <TextField
+              label="URL del logotipo"
+              value={logoUrl}
+              onChange={(event) => setLogoUrl(event.target.value)}
+              placeholder="https://..."
+            />
+            <Button variant="contained" onClick={handleAdd} disabled={!name.trim()}>
+              Agregar unidad
+            </Button>
+          </Stack>
+        </Paper>
+      )}
 
-      <Paper sx={{ p: 3 }} elevation={2}>
+      <Paper sx={{ p: { xs: 2, md: 3 }, overflow: 'hidden' }} elevation={2}>
         <Stack spacing={1}>
           <Typography variant="h6">Unidades actuales</Typography>
-          <Table size="small">
-            <TableHead>
-              <TableRow>
-                <TableCell>Unidad</TableCell>
-                <TableCell>Tipo</TableCell>
-                <TableCell>Dirección</TableCell>
-                <TableCell>Teléfono</TableCell>
-                <TableCell>Admin</TableCell>
-                <TableCell align="right">Acciones</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {units.map((unit) => (
-                <TableRow key={unit.id}>
-                  <TableCell>{unit.name}</TableCell>
-                  <TableCell>{unit.type === 'clinic' ? 'Clínica' : 'Individual'}</TableCell>
-                  <TableCell>{unit.address ?? '-'}</TableCell>
-                  <TableCell>{unit.phone ?? '-'}</TableCell>
-                  <TableCell>{unit.adminName ?? '-'}</TableCell>
-                  <TableCell align="right">
-                    <IconButton size="small" onClick={() => setEditingUnit(unit)}>
-                      <EditIcon fontSize="small" />
-                    </IconButton>
-                    <IconButton size="small" onClick={() => setDeleteUnit(unit)}>
-                      <DeleteIcon fontSize="small" />
-                    </IconButton>
-                  </TableCell>
+          <Box sx={{ width: '100%', overflowX: 'auto' }}>
+            <Table size="small" sx={{ minWidth: 900 }}>
+              <TableHead>
+                <TableRow>
+                  <TableCell>Unidad</TableCell>
+                  <TableCell>Tipo</TableCell>
+                  <TableCell>Dirección</TableCell>
+                  <TableCell>Teléfono</TableCell>
+                  <TableCell>Admin</TableCell>
+                  <TableCell>Logo</TableCell>
+                  <TableCell align="right">Acciones</TableCell>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHead>
+              <TableBody>
+                {units.map((unit) => (
+                  <TableRow key={unit.id}>
+                    <TableCell>{unit.name}</TableCell>
+                    <TableCell>{unit.type === 'clinic' ? 'Clínica' : 'Individual'}</TableCell>
+                    <TableCell>{unit.address ?? '-'}</TableCell>
+                    <TableCell>{unit.phone ?? '-'}</TableCell>
+                    <TableCell>{unit.adminName ?? '-'}</TableCell>
+                    <TableCell>
+                      {unit.logoUrl ? (
+                        <Box
+                          component="img"
+                          src={unit.logoUrl}
+                          alt={unit.name}
+                          sx={{ maxHeight: 32, maxWidth: 96, objectFit: 'contain' }}
+                        />
+                      ) : (
+                        '-'
+                      )}
+                    </TableCell>
+                    <TableCell align="right">
+                      <IconButton size="small" onClick={() => setEditingUnit(unit)}>
+                        <EditIcon fontSize="small" />
+                      </IconButton>
+                      {canManageUnits && (
+                        <IconButton size="small" onClick={() => setDeleteUnit(unit)}>
+                          <DeleteIcon fontSize="small" />
+                        </IconButton>
+                      )}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </Box>
         </Stack>
       </Paper>
 
@@ -201,6 +233,22 @@ function AdminUnits() {
                 setEditingUnit((prev) => (prev ? { ...prev, adminName: event.target.value } : prev))
               }
             />
+            <TextField
+              label="URL del logotipo"
+              value={editingUnit?.logoUrl ?? ''}
+              onChange={(event) =>
+                setEditingUnit((prev) => (prev ? { ...prev, logoUrl: event.target.value } : prev))
+              }
+              placeholder="https://..."
+            />
+            {editingUnit?.logoUrl && (
+              <Box
+                component="img"
+                src={editingUnit.logoUrl}
+                alt={editingUnit.name}
+                sx={{ maxHeight: 72, maxWidth: '100%', objectFit: 'contain', alignSelf: 'flex-start' }}
+              />
+            )}
           </Stack>
         </DialogContent>
         <DialogActions>

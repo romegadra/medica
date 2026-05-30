@@ -119,40 +119,42 @@ function AdminReceptionists() {
         </Stack>
       </Paper>
 
-      <Paper sx={{ p: 3 }} elevation={2}>
+      <Paper sx={{ p: { xs: 2, md: 3 }, overflow: 'hidden' }} elevation={2}>
         <Stack spacing={1}>
           <Typography variant="h6">Recepcionistas actuales</Typography>
-          <Table size="small">
-            <TableHead>
-              <TableRow>
-                <TableCell>Recepcionista</TableCell>
-                <TableCell>Correo</TableCell>
-                <TableCell>Direccion</TableCell>
-                <TableCell>Celular</TableCell>
-                <TableCell>Unidad</TableCell>
-                <TableCell align="right">Acciones</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {receptionists.map((receptionist) => (
-                <TableRow key={receptionist.id}>
-                  <TableCell>{receptionist.name}</TableCell>
-                  <TableCell>{receptionist.email ?? '-'}</TableCell>
-                  <TableCell>{receptionist.address}</TableCell>
-                  <TableCell>{receptionist.phone}</TableCell>
-                  <TableCell>{units.find((unit) => unit.id === receptionist.unitId)?.name ?? 'Unidad'}</TableCell>
-                  <TableCell align="right">
-                    <IconButton size="small" onClick={() => setEditingReceptionist(receptionist)}>
-                      <EditIcon fontSize="small" />
-                    </IconButton>
-                    <IconButton size="small" onClick={() => setDeleteReceptionist(receptionist)}>
-                      <DeleteIcon fontSize="small" />
-                    </IconButton>
-                  </TableCell>
+          <Box sx={{ width: '100%', overflowX: 'auto' }}>
+            <Table size="small" sx={{ minWidth: 820 }}>
+              <TableHead>
+                <TableRow>
+                  <TableCell>Recepcionista</TableCell>
+                  <TableCell>Correo</TableCell>
+                  <TableCell>Direccion</TableCell>
+                  <TableCell>Celular</TableCell>
+                  <TableCell>Unidad</TableCell>
+                  <TableCell align="right">Acciones</TableCell>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHead>
+              <TableBody>
+                {receptionists.map((receptionist) => (
+                  <TableRow key={receptionist.id}>
+                    <TableCell>{receptionist.name}</TableCell>
+                    <TableCell>{receptionist.email ?? '-'}</TableCell>
+                    <TableCell>{receptionist.address}</TableCell>
+                    <TableCell>{receptionist.phone}</TableCell>
+                    <TableCell>{units.find((unit) => unit.id === receptionist.unitId)?.name ?? 'Unidad'}</TableCell>
+                    <TableCell align="right">
+                      <IconButton size="small" onClick={() => setEditingReceptionist(receptionist)}>
+                        <EditIcon fontSize="small" />
+                      </IconButton>
+                      <IconButton size="small" onClick={() => setDeleteReceptionist(receptionist)}>
+                        <DeleteIcon fontSize="small" />
+                      </IconButton>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </Box>
         </Stack>
       </Paper>
 

@@ -19,10 +19,21 @@ import {
 import { useEffect, useMemo, useState } from 'react'
 import { useAuth } from '../auth/AuthContext'
 import { useData } from '../data/DataContext'
+import DoctorTabs from '../components/DoctorTabs'
+
+function formatVisitDate(value: string) {
+  const [year, month, day] = value.split('-').map(Number)
+  if (!year || !month || !day) return value
+  return new Intl.DateTimeFormat('es-MX', {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+  }).format(new Date(year, month - 1, day))
+}
 
 function DoctorVisits() {
   const { doctorId } = useAuth()
-  const { doctors, patients, specialtyTemplates, visits, addVisit, specialties } = useData()
+  const { doctors, patients, specialtyTemplates, visits, addVisit } = useData()
   const doctor = doctors.find((item) => item.id === doctorId)
   const template = specialtyTemplates.find((item) => item.specialtyId === doctor?.specialtyId)
   const canManageVisits = doctor?.canManageVisits ?? true
@@ -75,9 +86,11 @@ function DoctorVisits() {
           Consultas y seguimiento
         </Typography>
         <Typography variant="body2" color="text.secondary">
-          Registra la consulta segun la especialidad del doctor.
+          Registro de consulta.
         </Typography>
       </Box>
+
+      <DoctorTabs />
 
       <Paper sx={{ p: 3 }} elevation={2}>
         <Stack spacing={2}>
@@ -110,8 +123,9 @@ function DoctorVisits() {
           />
           {template ? (
             <>
+              <hr />
               <Typography variant="subtitle1">
-                {specialties.find((item) => item.id === template.specialtyId)?.name ?? 'Especialidad'}
+                Consulta actual:
               </Typography>
               <Stack spacing={2}>
                 {template.fields.map((field) => (
@@ -147,32 +161,34 @@ function DoctorVisits() {
         </Stack>
       </Paper>
 
-      <Paper sx={{ p: 3 }} elevation={2}>
+      <Paper sx={{ p: { xs: 2, md: 3 }, overflow: 'hidden' }} elevation={2}>
         <Stack spacing={1}>
           <Typography variant="h6">Historial</Typography>
-          <Table size="small">
-            <TableHead>
-              <TableRow>
-                <TableCell>Fecha</TableCell>
-                <TableCell>Paciente</TableCell>
-                <TableCell>Resumen</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {patientVisits.map((visit) => {
-                const patient = doctorPatients.find((item) => item.id === visit.patientId)
-                const resumen =
-                  visit.responses.diagnostico || visit.responses.motivo || visit.responses.notas || '-'
-                return (
-                  <TableRow key={visit.id} hover onClick={() => setSelectedVisit(visit)}>
-                    <TableCell>{visit.date}</TableCell>
-                    <TableCell>{patient?.name ?? 'Paciente'}</TableCell>
-                    <TableCell>{resumen}</TableCell>
-                  </TableRow>
-                )
-              })}
-            </TableBody>
-          </Table>
+          <Box sx={{ width: '100%', overflowX: 'auto' }}>
+            <Table size="small" sx={{ minWidth: 640 }}>
+              <TableHead>
+                <TableRow>
+                  <TableCell>Fecha</TableCell>
+                  <TableCell>Paciente</TableCell>
+                  <TableCell>Resumen</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {patientVisits.map((visit) => {
+                  const patient = doctorPatients.find((item) => item.id === visit.patientId)
+                  const resumen =
+                    visit.responses.diagnostico || visit.responses.motivo || visit.responses.notas || '-'
+                  return (
+                    <TableRow key={visit.id} hover onClick={() => setSelectedVisit(visit)}>
+                      <TableCell>{formatVisitDate(visit.date)}</TableCell>
+                      <TableCell>{patient?.name ?? 'Paciente'}</TableCell>
+                      <TableCell>{resumen}</TableCell>
+                    </TableRow>
+                  )
+                })}
+              </TableBody>
+            </Table>
+          </Box>
         </Stack>
       </Paper>
 
@@ -186,7 +202,7 @@ function DoctorVisits() {
         <DialogContent>
           <Stack spacing={2} sx={{ mt: 1 }}>
             <Typography variant="body2" color="text.secondary">
-              Fecha: {selectedVisit?.date}
+              Fecha: {selectedVisit ? formatVisitDate(selectedVisit.date) : ''}
             </Typography>
             <Typography variant="body2" color="text.secondary">
               Paciente:{' '}

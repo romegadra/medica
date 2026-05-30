@@ -34,6 +34,7 @@ function AdminDoctors() {
   const [licenseNumber, setLicenseNumber] = useState('')
   const [canEditPatients, setCanEditPatients] = useState(true)
   const [canManageVisits, setCanManageVisits] = useState(true)
+  const [notificationsEnabled, setNotificationsEnabled] = useState(true)
   const [unitId, setUnitId] = useState(units[0]?.id ?? '')
   const [editingDoctor, setEditingDoctor] = useState<Doctor | null>(null)
   const [deleteDoctor, setDeleteDoctor] = useState<Doctor | null>(null)
@@ -53,6 +54,7 @@ function AdminDoctors() {
       licenseNumber: licenseNumber.trim() || undefined,
       canEditPatients,
       canManageVisits,
+      notificationsEnabled,
     })
     setName('')
     setEmail('')
@@ -61,6 +63,7 @@ function AdminDoctors() {
     setLicenseNumber('')
     setCanEditPatients(true)
     setCanManageVisits(true)
+    setNotificationsEnabled(true)
   }
 
   useEffect(() => {
@@ -147,6 +150,15 @@ function AdminDoctors() {
             }
             label="Permitir consultas"
           />
+          <FormControlLabel
+            control={
+              <Switch
+                checked={notificationsEnabled}
+                onChange={(event) => setNotificationsEnabled(event.target.checked)}
+              />
+            }
+            label="Recibir notificaciones"
+          />
           <TextField
             label="Unidad"
             select
@@ -168,48 +180,52 @@ function AdminDoctors() {
         </Stack>
       </Paper>
 
-      <Paper sx={{ p: 3 }} elevation={2}>
+      <Paper sx={{ p: { xs: 2, md: 3 }, overflow: 'hidden' }} elevation={2}>
         <Stack spacing={1}>
           <Typography variant="h6">Doctores actuales</Typography>
-          <Table size="small">
-            <TableHead>
-              <TableRow>
-                <TableCell>Doctor</TableCell>
-                <TableCell>Correo</TableCell>
-                <TableCell>Especialidad</TableCell>
-                <TableCell>Celular</TableCell>
-                <TableCell>Numero de cedula</TableCell>
-                <TableCell>Pacientes</TableCell>
-                <TableCell>Consultas</TableCell>
-                <TableCell>Unidad</TableCell>
-                <TableCell align="right">Acciones</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {doctors.map((doctor) => (
-                <TableRow key={doctor.id}>
-                  <TableCell>{doctor.name}</TableCell>
-                  <TableCell>{doctor.email ?? '-'}</TableCell>
-                  <TableCell>
-                    {specialties.find((specialty) => specialty.id === doctor.specialtyId)?.name ?? '-'}
-                  </TableCell>
-                  <TableCell>{doctor.phone ?? '-'}</TableCell>
-                  <TableCell>{doctor.licenseNumber ?? '-'}</TableCell>
-                  <TableCell>{doctor.canEditPatients ? 'Si' : 'No'}</TableCell>
-                  <TableCell>{doctor.canManageVisits ? 'Si' : 'No'}</TableCell>
-                  <TableCell>{units.find((unit) => unit.id === doctor.unitId)?.name ?? 'Unidad'}</TableCell>
-                  <TableCell align="right">
-                    <IconButton size="small" onClick={() => setEditingDoctor(doctor)}>
-                      <EditIcon fontSize="small" />
-                    </IconButton>
-                    <IconButton size="small" onClick={() => setDeleteDoctor(doctor)}>
-                      <DeleteIcon fontSize="small" />
-                    </IconButton>
-                  </TableCell>
+          <Box sx={{ width: '100%', overflowX: 'auto' }}>
+            <Table size="small" sx={{ minWidth: 1120 }}>
+              <TableHead>
+                <TableRow>
+                  <TableCell>Doctor</TableCell>
+                  <TableCell>Correo</TableCell>
+                  <TableCell>Especialidad</TableCell>
+                  <TableCell>Celular</TableCell>
+                  <TableCell>Numero de cedula</TableCell>
+                  <TableCell>Pacientes</TableCell>
+                  <TableCell>Consultas</TableCell>
+                  <TableCell>Notificaciones</TableCell>
+                  <TableCell>Unidad</TableCell>
+                  <TableCell align="right">Acciones</TableCell>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHead>
+              <TableBody>
+                {doctors.map((doctor) => (
+                  <TableRow key={doctor.id}>
+                    <TableCell>{doctor.name}</TableCell>
+                    <TableCell>{doctor.email ?? '-'}</TableCell>
+                    <TableCell>
+                      {specialties.find((specialty) => specialty.id === doctor.specialtyId)?.name ?? '-'}
+                    </TableCell>
+                    <TableCell>{doctor.phone ?? '-'}</TableCell>
+                    <TableCell>{doctor.licenseNumber ?? '-'}</TableCell>
+                    <TableCell>{doctor.canEditPatients ? 'Si' : 'No'}</TableCell>
+                    <TableCell>{doctor.canManageVisits ? 'Si' : 'No'}</TableCell>
+                    <TableCell>{doctor.notificationsEnabled ?? true ? 'Si' : 'No'}</TableCell>
+                    <TableCell>{units.find((unit) => unit.id === doctor.unitId)?.name ?? 'Unidad'}</TableCell>
+                    <TableCell align="right">
+                      <IconButton size="small" onClick={() => setEditingDoctor(doctor)}>
+                        <EditIcon fontSize="small" />
+                      </IconButton>
+                      <IconButton size="small" onClick={() => setDeleteDoctor(doctor)}>
+                        <DeleteIcon fontSize="small" />
+                      </IconButton>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </Box>
         </Stack>
       </Paper>
 
@@ -291,6 +307,19 @@ function AdminDoctors() {
                 />
               }
               label="Permitir consultas"
+            />
+            <FormControlLabel
+              control={
+                <Switch
+                  checked={editingDoctor?.notificationsEnabled ?? true}
+                  onChange={(event) =>
+                    setEditingDoctor((prev) =>
+                      prev ? { ...prev, notificationsEnabled: event.target.checked } : prev,
+                    )
+                  }
+                />
+              }
+              label="Recibir notificaciones"
             />
             <TextField
               label="Unidad"

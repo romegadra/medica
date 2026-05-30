@@ -3,6 +3,8 @@ import type {
   Appointment,
   Constraints,
   Doctor,
+  DoctorBlockedTime,
+  DoctorSchedule,
   Patient,
   Receptionist,
   Specialty,
@@ -11,9 +13,13 @@ import type {
   VisitEntry,
 } from './types'
 import { apiRequest } from '../api/client'
+import { useAuth } from '../auth/AuthContext'
+import { normalizePhone } from '../utils/phone'
 
 type DataState = {
   doctors: Doctor[]
+  doctorSchedules: DoctorSchedule[]
+  doctorBlockedTimes: DoctorBlockedTime[]
   patients: Patient[]
   units: Unit[]
   receptionists: Receptionist[]
@@ -41,13 +47,16 @@ type DataState = {
   addDoctor: (doctor: Doctor) => void
   updateDoctor: (doctor: Doctor) => void
   removeDoctor: (id: string) => void
-  addPatient: (patient: Patient) => void
+  addDoctorBlockedTime: (block: DoctorBlockedTime) => Promise<{ ok: boolean; reason?: string }>
+  removeDoctorBlockedTime: (id: string) => Promise<{ ok: boolean; reason?: string }>
+  addPatient: (patient: Patient) => Promise<Patient>
   updatePatient: (patient: Patient) => void
   removePatient: (id: string) => void
   addAppointment: (appointment: Appointment) => Promise<{ ok: boolean; reason?: string }>
   updateAppointment: (appointment: Appointment) => Promise<{ ok: boolean; reason?: string }>
   removeAppointment: (id: string) => void
-  updateConstraints: (next: Constraints) => void
+  updateConstraints: (next: Constraints) => Promise<{ ok: boolean; reason?: string }>
+  runAppointmentReminders: () => Promise<{ ok: boolean; count?: number; reason?: string }>
 }
 
 const DataContext = createContext<DataState | undefined>(undefined)
@@ -56,16 +65,41 @@ function overlaps(a: Appointment, b: Appointment) {
   return new Date(a.start) < new Date(b.end) && new Date(b.start) < new Date(a.end)
 }
 
+function timeToMinutes(value: string) {
+  const [hour, minute] = value.split(':').map(Number)
+  return hour * 60 + minute
+}
+
+function overlapsBlockedTime(appointment: Appointment, block: DoctorBlockedTime) {
+  const start = new Date(appointment.start)
+  const end = new Date(appointment.end)
+
+  if (block.recurrenceType === 'weekly') {
+    if (block.dayOfWeek === undefined || !block.startTime || !block.endTime) return false
+    if (start.getDay() !== block.dayOfWeek || end.getDay() !== block.dayOfWeek) return false
+    const startMinutes = start.getHours() * 60 + start.getMinutes()
+    const endMinutes = end.getHours() * 60 + end.getMinutes()
+    return startMinutes < timeToMinutes(block.endTime) && timeToMinutes(block.startTime) < endMinutes
+  }
+
+  return start < new Date(block.end) && new Date(block.start) < end
+}
+
 export function DataProvider({ children }: { children: React.ReactNode }) {
+  const { token } = useAuth()
   const [appointments, setAppointments] = useState<Appointment[]>([])
   const [constraints, setConstraints] = useState<Constraints>({
     startHour: 8,
     endHour: 20,
     slotMinutes: 30,
     allowOverlap: false,
+    appointmentRemindersEnabled: false,
+    appointmentReminderIntervalMinutes: 60,
   })
   const [unitList, setUnitList] = useState<Unit[]>([])
   const [doctorList, setDoctorList] = useState<Doctor[]>([])
+  const [doctorScheduleList, setDoctorScheduleList] = useState<DoctorSchedule[]>([])
+  const [doctorBlockedTimeList, setDoctorBlockedTimeList] = useState<DoctorBlockedTime[]>([])
   const [patientList, setPatientList] = useState<Patient[]>([])
   const [receptionistList, setReceptionistList] = useState<Receptionist[]>([])
   const [visitList, setVisitList] = useState<VisitEntry[]>([])
@@ -75,6 +109,12 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   const [error, setError] = useState<string | null>(null)
 
   const refresh = useCallback(() => {
+    if (!token) {
+      setLoading(false)
+      setError(null)
+      return
+    }
+
     void (async () => {
       setLoading(true)
       setError(null)
@@ -82,29 +122,38 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         const [
           unitsResponse,
           doctorsResponse,
+          doctorSchedulesResponse,
+          doctorBlockedTimesResponse,
           patientsResponse,
           receptionistsResponse,
           specialtiesResponse,
           templatesResponse,
+          settingsResponse,
           appointmentsResponse,
           visitsResponse,
         ] = await Promise.all([
           apiRequest<Unit[]>('/units'),
           apiRequest<Doctor[]>('/doctors'),
+          apiRequest<DoctorSchedule[]>('/doctor-schedules'),
+          apiRequest<DoctorBlockedTime[]>('/doctor-blocks'),
           apiRequest<Patient[]>('/patients'),
           apiRequest<Receptionist[]>('/receptionists'),
           apiRequest<Specialty[]>('/specialties'),
           apiRequest<SpecialtyTemplate[]>('/templates'),
+          apiRequest<Constraints>('/settings'),
           apiRequest<Appointment[]>('/appointments'),
           apiRequest<VisitEntry[]>('/visits'),
         ])
 
         setUnitList(unitsResponse)
         setDoctorList(doctorsResponse)
+        setDoctorScheduleList(doctorSchedulesResponse)
+        setDoctorBlockedTimeList(doctorBlockedTimesResponse)
         setPatientList(patientsResponse)
         setReceptionistList(receptionistsResponse)
         setSpecialtyList(specialtiesResponse)
         setTemplateList(templatesResponse)
+        setConstraints(settingsResponse)
         setAppointments(appointmentsResponse)
         setVisitList(visitsResponse)
       } catch (err) {
@@ -113,7 +162,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         setLoading(false)
       }
     })()
-  }, [])
+  }, [token])
 
   useEffect(() => {
     refresh()
@@ -122,6 +171,8 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   const value = useMemo<DataState>(
     () => ({
       doctors: doctorList,
+      doctorSchedules: doctorScheduleList,
+      doctorBlockedTimes: doctorBlockedTimeList,
       patients: patientList,
       units: unitList,
       receptionists: receptionistList,
@@ -174,6 +225,8 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
             .map((doctor) => doctor.id)
           setUnitList((prev) => prev.filter((item) => item.id !== id))
           setDoctorList((prev) => prev.filter((item) => item.unitId !== id))
+          setDoctorScheduleList((prev) => prev.filter((item) => !affectedDoctorIds.includes(item.doctorId)))
+          setDoctorBlockedTimeList((prev) => prev.filter((item) => !affectedDoctorIds.includes(item.doctorId)))
           setPatientList((prev) => prev.filter((item) => !affectedDoctorIds.includes(item.doctorId)))
           setAppointments((prev) => prev.filter((item) => !affectedDoctorIds.includes(item.doctorId)))
           setReceptionistList((prev) => prev.filter((item) => item.unitId !== id))
@@ -182,7 +235,10 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       },
       addReceptionist: (receptionist) => {
         void (async () => {
-          const created = await apiRequest<Receptionist>('/receptionists', 'POST', receptionist)
+          const created = await apiRequest<Receptionist>('/receptionists', 'POST', {
+            ...receptionist,
+            phone: normalizePhone(receptionist.phone) ?? '',
+          })
           setReceptionistList((prev) => [...prev, created])
         })()
       },
@@ -191,7 +247,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
           const updated = await apiRequest<Receptionist>(
             `/receptionists/${receptionist.id}`,
             'PUT',
-            receptionist,
+            { ...receptionist, phone: normalizePhone(receptionist.phone) ?? '' },
           )
           setReceptionistList((prev) =>
             prev.map((item) => (item.id === updated.id ? updated : item)),
@@ -236,13 +292,19 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       constraints,
       addDoctor: (doctor) => {
         void (async () => {
-          const created = await apiRequest<Doctor>('/doctors', 'POST', doctor)
+          const created = await apiRequest<Doctor>('/doctors', 'POST', {
+            ...doctor,
+            phone: normalizePhone(doctor.phone),
+          })
           setDoctorList((prev) => [...prev, created])
         })()
       },
       updateDoctor: (doctor) => {
         void (async () => {
-          const updated = await apiRequest<Doctor>(`/doctors/${doctor.id}`, 'PUT', doctor)
+          const updated = await apiRequest<Doctor>(`/doctors/${doctor.id}`, 'PUT', {
+            ...doctor,
+            phone: normalizePhone(doctor.phone),
+          })
           setDoctorList((prev) => prev.map((item) => (item.id === updated.id ? updated : item)))
         })()
       },
@@ -250,20 +312,47 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         void (async () => {
           await apiRequest<void>(`/doctors/${id}`, 'DELETE')
           setDoctorList((prev) => prev.filter((item) => item.id !== id))
+          setDoctorScheduleList((prev) => prev.filter((item) => item.doctorId !== id))
+          setDoctorBlockedTimeList((prev) => prev.filter((item) => item.doctorId !== id))
           setPatientList((prev) => prev.filter((item) => item.doctorId !== id))
           setAppointments((prev) => prev.filter((item) => item.doctorId !== id))
           setVisitList((prev) => prev.filter((item) => item.doctorId !== id))
         })()
       },
-      addPatient: (patient) => {
-        void (async () => {
-          const created = await apiRequest<Patient>('/patients', 'POST', patient)
-          setPatientList((prev) => [...prev, created])
-        })()
+      addDoctorBlockedTime: async (block) => {
+        try {
+          const created = await apiRequest<DoctorBlockedTime>('/doctor-blocks', 'POST', block)
+          setDoctorBlockedTimeList((prev) => [...prev, created])
+          return { ok: true }
+        } catch (err) {
+          const message = err instanceof Error ? err.message : 'Error al bloquear horario'
+          return { ok: false, reason: message }
+        }
+      },
+      removeDoctorBlockedTime: async (id) => {
+        try {
+          await apiRequest<void>(`/doctor-blocks/${id}`, 'DELETE')
+          setDoctorBlockedTimeList((prev) => prev.filter((item) => item.id !== id))
+          return { ok: true }
+        } catch (err) {
+          const message = err instanceof Error ? err.message : 'Error al desbloquear horario'
+          return { ok: false, reason: message }
+        }
+      },
+      addPatient: async (patient) => {
+        const created = await apiRequest<Patient>('/patients', 'POST', {
+          ...patient,
+          phone: normalizePhone(patient.phone),
+        })
+        setPatientList((prev) => [...prev.filter((item) => item.id !== created.id), created])
+        return created
       },
       updatePatient: (patient) => {
         void (async () => {
-          const updated = await apiRequest<Patient>(`/patients/${patient.id}`, 'PUT', patient)
+          const updated = await apiRequest<Patient>(`/patients/${patient.id}`, 'PUT', {
+            ...patient,
+            phone: normalizePhone(patient.phone),
+          })
           setPatientList((prev) => prev.map((item) => (item.id === updated.id ? updated : item)))
         })()
       },
@@ -276,9 +365,18 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         })()
       },
       addAppointment: async (appointment) => {
+        const blocked = doctorBlockedTimeList.some(
+          (block) =>
+            block.doctorId === appointment.doctorId && overlapsBlockedTime(appointment, block),
+        )
+        if (blocked) {
+          return { ok: false, reason: 'La cita se cruza con un horario bloqueado.' }
+        }
+
         if (!constraints.allowOverlap) {
           const conflict = appointments.some(
             (existing) =>
+              existing.status !== 'cancelled' &&
               existing.doctorId === appointment.doctorId && overlaps(existing, appointment),
           )
           if (conflict) {
@@ -299,9 +397,18 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         }
       },
       updateAppointment: async (appointment) => {
+        const blocked = doctorBlockedTimeList.some(
+          (block) =>
+            block.doctorId === appointment.doctorId && overlapsBlockedTime(appointment, block),
+        )
+        if (blocked) {
+          return { ok: false, reason: 'La cita se cruza con un horario bloqueado.' }
+        }
+
         if (!constraints.allowOverlap) {
           const conflict = appointments.some(
             (existing) =>
+              existing.status !== 'cancelled' &&
               existing.id !== appointment.id &&
               existing.doctorId === appointment.doctorId &&
               overlaps(existing, appointment),
@@ -333,8 +440,27 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
           setAppointments((prev) => prev.filter((item) => item.id !== id))
         })()
       },
-      updateConstraints: (next) => {
-        setConstraints(next)
+      updateConstraints: async (next) => {
+        try {
+          const updated = await apiRequest<Constraints>('/settings', 'PUT', next)
+          setConstraints(updated)
+          return { ok: true }
+        } catch (err) {
+          const message = err instanceof Error ? err.message : 'Error al guardar restricciones'
+          return { ok: false, reason: message }
+        }
+      },
+      runAppointmentReminders: async () => {
+        try {
+          const response = await apiRequest<{ ok: boolean; count: number }>(
+            '/settings/run-appointment-reminders',
+            'POST',
+          )
+          return { ok: true, count: response.count }
+        } catch (err) {
+          const message = err instanceof Error ? err.message : 'Error al ejecutar recordatorios'
+          return { ok: false, reason: message }
+        }
       },
     }),
     [
@@ -342,6 +468,8 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       constraints,
       unitList,
       doctorList,
+      doctorScheduleList,
+      doctorBlockedTimeList,
       patientList,
       receptionistList,
       visitList,

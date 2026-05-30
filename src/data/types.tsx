@@ -8,6 +8,7 @@ export type Doctor = {
   licenseNumber?: string
   canEditPatients?: boolean
   canManageVisits?: boolean
+  notificationsEnabled?: boolean
 }
 
 export type Patient = {
@@ -26,6 +27,7 @@ export type Unit = {
   address?: string
   phone?: string
   adminName?: string
+  logoUrl?: string
 }
 
 export type SpecialtyFieldType = 'text' | 'textarea' | 'number' | 'date'
@@ -73,6 +75,33 @@ export type Appointment = {
   title: string
   start: string
   end: string
+  status?: 'pending' | 'scheduled' | 'confirmed' | 'attended' | 'no_show' | 'cancelled' | 'rescheduled'
+  attended?: boolean
+  notes?: string
+  paymentType?: string
+  cancellationReason?: string
+  cancelledAt?: string
+  reminderSentAt?: string
+}
+
+export type DoctorSchedule = {
+  id: string
+  doctorId: string
+  dayOfWeek: number
+  startTime: string
+  endTime: string
+}
+
+export type DoctorBlockedTime = {
+  id: string
+  doctorId: string
+  start: string
+  end: string
+  reason?: string
+  recurrenceType?: 'date' | 'weekly'
+  dayOfWeek?: number
+  startTime?: string
+  endTime?: string
 }
 
 export type Constraints = {
@@ -80,4 +109,20 @@ export type Constraints = {
   endHour: number
   slotMinutes: number
   allowOverlap: boolean
+  appointmentRemindersEnabled: boolean
+  appointmentReminderIntervalMinutes: number
+}
+
+export type AuditLog = {
+  id: string
+  userId?: string
+  role?: string
+  unitId?: string
+  doctorId?: string
+  receptionistId?: string
+  action: string
+  entityType: string
+  entityId?: string
+  summary?: string
+  createdAt: string
 }

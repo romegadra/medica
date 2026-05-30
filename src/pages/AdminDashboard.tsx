@@ -1,14 +1,45 @@
-import { Box, Button, Divider, Paper, Stack, Switch, TextField, Typography } from '@mui/material'
+import { Alert, Box, Button, Divider, Paper, Stack, Switch, TextField, Typography } from '@mui/material'
 import { Link } from 'react-router-dom'
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useData } from '../data/DataContext'
 
 function AdminDashboard() {
-  const { constraints, updateConstraints, doctors, patients, units } = useData()
+  const { constraints, updateConstraints, runAppointmentReminders, doctors, patients, units } = useData()
   const [form, setForm] = useState(constraints)
+  const [saveMessage, setSaveMessage] = useState<string | null>(null)
+  const [saveError, setSaveError] = useState<string | null>(null)
+  const [runningReminders, setRunningReminders] = useState(false)
+
+  useEffect(() => {
+    setForm(constraints)
+  }, [constraints])
 
   const handleChange = (field: keyof typeof form, value: number | boolean) => {
     setForm((prev) => ({ ...prev, [field]: value }))
+  }
+
+  const handleSave = async () => {
+    setSaveMessage(null)
+    setSaveError(null)
+    const result = await updateConstraints(form)
+    if (!result.ok) {
+      setSaveError(result.reason ?? 'No se pudieron guardar las restricciones.')
+      return
+    }
+    setSaveMessage('Restricciones guardadas correctamente.')
+  }
+
+  const handleRunReminders = async () => {
+    setRunningReminders(true)
+    setSaveMessage(null)
+    setSaveError(null)
+    const result = await runAppointmentReminders()
+    if (!result.ok) {
+      setSaveError(result.reason ?? 'No se pudieron ejecutar los recordatorios.')
+    } else {
+      setSaveMessage(`Recordatorios ejecutados. Citas revisadas para mañana: ${result.count ?? 0}.`)
+    }
+    setRunningReminders(false)
   }
 
   const unitSummary = useMemo(() => {
@@ -71,9 +102,45 @@ function AdminDashboard() {
             />
             <Typography variant="body2">Permitir citas traslapadas</Typography>
           </Stack>
-          <Button variant="contained" onClick={() => updateConstraints(form)}>
+          {saveError && <Alert severity="error">{saveError}</Alert>}
+          {saveMessage && <Alert severity="success">{saveMessage}</Alert>}
+          <Button variant="contained" onClick={handleSave}>
             Guardar restricciones
           </Button>
+        </Stack>
+      </Paper>
+
+      <Paper sx={{ p: 3 }} elevation={2}>
+        <Stack spacing={2}>
+          <Typography variant="h6">Recordatorios de citas</Typography>
+          <Typography variant="body2" color="text.secondary">
+            Configura el job que envía WhatsApp a pacientes un día antes de su cita.
+          </Typography>
+          <Stack direction="row" alignItems="center" spacing={1}>
+            <Switch
+              checked={form.appointmentRemindersEnabled}
+              onChange={(event) => handleChange('appointmentRemindersEnabled', event.target.checked)}
+            />
+            <Typography variant="body2">Activar recordatorios automáticos</Typography>
+          </Stack>
+          <TextField
+            label="Ejecutar cada (minutos)"
+            type="number"
+            inputProps={{ min: 5, max: 1440, step: 5 }}
+            value={form.appointmentReminderIntervalMinutes}
+            onChange={(event) =>
+              handleChange('appointmentReminderIntervalMinutes', Number(event.target.value))
+            }
+            sx={{ maxWidth: 260, '& .MuiInputLabel-root': { color: 'text.primary' } }}
+          />
+          <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
+            <Button variant="contained" onClick={handleSave}>
+              Guardar configuración
+            </Button>
+            <Button variant="outlined" onClick={handleRunReminders} disabled={runningReminders}>
+              Ejecutar ahora
+            </Button>
+          </Stack>
         </Stack>
       </Paper>
 
@@ -91,12 +158,27 @@ function AdminDashboard() {
 
       <Paper sx={{ p: 3 }} elevation={2}>
         <Stack spacing={2}>
+          <Typography variant="h6">Administradores</Typography>
+          <Typography variant="body2" color="text.secondary">
+            Crea admins de unidad o admins master.
+          </Typography>
+          <Button component={Link} to="/admin/users" variant="outlined">
+            Administrar usuarios admin
+          </Button>
+        </Stack>
+      </Paper>
+
+      <Paper sx={{ p: 3 }} elevation={2}>
+        <Stack spacing={2}>
           <Typography variant="h6">Doctores</Typography>
           <Typography variant="body2" color="text.secondary">
             Agrega y administra doctores disponibles para agenda.
           </Typography>
           <Button component={Link} to="/admin/doctors" variant="outlined">
             Administrar doctores
+          </Button>
+          <Button component={Link} to="/admin/doctor-blocks" variant="outlined">
+            Bloquear horarios
           </Button>
         </Stack>
       </Paper>
@@ -133,6 +215,18 @@ function AdminDashboard() {
           </Typography>
           <Button component={Link} to="/admin/specialties" variant="outlined">
             Administrar especialidades
+          </Button>
+        </Stack>
+      </Paper>
+
+      <Paper sx={{ p: 3 }} elevation={2}>
+        <Stack spacing={2}>
+          <Typography variant="h6">Operación y seguridad</Typography>
+          <Typography variant="body2" color="text.secondary">
+            Revisa la bitácora de cambios de citas, pacientes y bloqueos de horario.
+          </Typography>
+          <Button component={Link} to="/admin/audit" variant="outlined">
+            Ver auditoría
           </Button>
         </Stack>
       </Paper>

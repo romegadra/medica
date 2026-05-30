@@ -11,6 +11,7 @@ import {
   Alert,
   Box,
   Button,
+  Chip,
   Divider,
   Dialog,
   DialogActions,
@@ -26,16 +27,51 @@ import {
   Switch,
   Typography,
 } from '@mui/material'
-import { Link } from 'react-router-dom'
 import ArrowBackIcon from '@mui/icons-material/ArrowBack'
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useData } from '../data/DataContext'
 import { useAuth } from '../auth/AuthContext'
-import type { Appointment } from '../data/types'
+import type { Appointment, DoctorBlockedTime } from '../data/types'
+import ReceptionistTabs from '../components/ReceptionistTabs'
 
 type CalendarView = 'timeGridWeek' | 'dayGridMonth'
 type DialogMode = 'create' | 'edit'
+type AppointmentStatus = NonNullable<Appointment['status']>
+
+const dayLabels = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado']
+
+const appointmentStatuses: { value: AppointmentStatus; label: string }[] = [
+  { value: 'pending', label: 'Pendiente' },
+  { value: 'scheduled', label: 'Agendada' },
+  { value: 'confirmed', label: 'Confirmada' },
+  { value: 'attended', label: 'Asistió' },
+  { value: 'no_show', label: 'No asistió' },
+  { value: 'cancelled', label: 'Cancelada' },
+  { value: 'rescheduled', label: 'Reagendada' },
+]
+
+const paymentTypes = [
+  { value: 'cash', label: 'Efectivo' },
+  { value: 'card', label: 'Tarjeta' },
+  { value: 'transfer', label: 'Transferencia' },
+  { value: 'insurance', label: 'Seguro' },
+]
+
+function getAppointmentStatus(appointment: Appointment): AppointmentStatus {
+  return appointment.attended ? 'attended' : appointment.status ?? 'scheduled'
+}
+
+function getAppointmentColor(appointment: Appointment) {
+  const status = getAppointmentStatus(appointment)
+  if (status === 'attended') return '#2e7d32'
+  if (status === 'confirmed') return '#1976d2'
+  if (status === 'pending') return '#8d6e63'
+  if (status === 'cancelled') return '#9e9e9e'
+  if (status === 'rescheduled') return '#6a1b9a'
+  if (status === 'no_show' || new Date(appointment.end) < new Date()) return '#c65f2f'
+  return undefined
+}
 
 function addMinutes(iso: string, minutes: number) {
   const next = new Date(iso)
@@ -47,8 +83,55 @@ function diffMinutes(startIso: string, endIso: string) {
   return Math.max(0, Math.round((new Date(endIso).getTime() - new Date(startIso).getTime()) / 60000))
 }
 
+function toDateTimeLocalValue(iso: string) {
+  if (!iso) return ''
+  const date = new Date(iso)
+  if (Number.isNaN(date.getTime())) return ''
+  const localDate = new Date(date.getTime() - date.getTimezoneOffset() * 60000)
+  return localDate.toISOString().slice(0, 16)
+}
+
+function fromDateTimeLocalValue(value: string) {
+  if (!value) return ''
+  return new Date(value).toISOString()
+}
+
+function timeToMinutes(value: string) {
+  const [hour, minute] = value.split(':').map(Number)
+  return hour * 60 + minute
+}
+
+function isWithinSchedule(
+  start: Date,
+  end: Date,
+  schedules: { dayOfWeek: number; startTime: string; endTime: string }[],
+) {
+  if (schedules.length === 0) return true
+  if (start.getDay() !== end.getDay()) return false
+  const startMinutes = start.getHours() * 60 + start.getMinutes()
+  const endMinutes = end.getHours() * 60 + end.getMinutes()
+  return schedules.some(
+    (schedule) =>
+      schedule.dayOfWeek === start.getDay() &&
+      startMinutes >= timeToMinutes(schedule.startTime) &&
+      endMinutes <= timeToMinutes(schedule.endTime),
+  )
+}
+
+function overlapsBlockedTime(start: Date, end: Date, block: DoctorBlockedTime) {
+  if (block.recurrenceType === 'weekly') {
+    if (block.dayOfWeek === undefined || !block.startTime || !block.endTime) return false
+    if (start.getDay() !== block.dayOfWeek || end.getDay() !== block.dayOfWeek) return false
+    const startMinutes = start.getHours() * 60 + start.getMinutes()
+    const endMinutes = end.getHours() * 60 + end.getMinutes()
+    return startMinutes < timeToMinutes(block.endTime) && timeToMinutes(block.startTime) < endMinutes
+  }
+
+  return start < new Date(block.end) && new Date(block.start) < end
+}
+
 function ReceptionistDashboard() {
-  const { doctors, patients, appointments, constraints, addAppointment, updateAppointment, addPatient } =
+  const { doctors, doctorSchedules, doctorBlockedTimes, patients, units, appointments, constraints, addAppointment, updateAppointment, addPatient } =
     useData()
   const { unitId } = useAuth()
   const unitDoctors = useMemo(
@@ -68,6 +151,10 @@ function ReceptionistDashboard() {
   const [addingPatient, setAddingPatient] = useState(false)
   const [newPatientName, setNewPatientName] = useState('')
   const [newPatientPhone, setNewPatientPhone] = useState('')
+  const [appointmentStatus, setAppointmentStatus] = useState<AppointmentStatus>('scheduled')
+  const [paymentType, setPaymentType] = useState('')
+  const [notes, setNotes] = useState('')
+  const [globalSearch, setGlobalSearch] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [calendarTitle, setCalendarTitle] = useState('')
   const calendarRef = useRef<FullCalendar | null>(null)
@@ -89,9 +176,135 @@ function ReceptionistDashboard() {
     () => patients.filter((patient) => patient.doctorId === doctorId),
     [patients, doctorId],
   )
+  const selectedPatient = useMemo(
+    () => doctorPatients.find((patient) => patient.id === patientId),
+    [doctorPatients, patientId],
+  )
+  const selectedDoctorSchedules = useMemo(
+    () => doctorSchedules.filter((schedule) => schedule.doctorId === doctorId),
+    [doctorSchedules, doctorId],
+  )
+  const selectedDoctorBlocks = useMemo(
+    () => doctorBlockedTimes.filter((block) => block.doctorId === doctorId),
+    [doctorBlockedTimes, doctorId],
+  )
+  const isBlocked = useCallback(
+    (start: Date, end: Date) => selectedDoctorBlocks.some((block) => overlapsBlockedTime(start, end, block)),
+    [selectedDoctorBlocks],
+  )
+  const businessHours = useMemo(
+    () =>
+      selectedDoctorSchedules.length > 0
+        ? selectedDoctorSchedules.map((schedule) => ({
+            daysOfWeek: [schedule.dayOfWeek],
+            startTime: schedule.startTime,
+            endTime: schedule.endTime,
+          }))
+        : {
+            daysOfWeek: [0, 1, 2, 3, 4, 5, 6],
+            startTime: `${constraints.startHour.toString().padStart(2, '0')}:00`,
+            endTime: `${constraints.endHour.toString().padStart(2, '0')}:00`,
+          },
+    [constraints.endHour, constraints.startHour, selectedDoctorSchedules],
+  )
+  const scheduleSummary =
+    selectedDoctorSchedules.length > 0
+      ? selectedDoctorSchedules
+          .map((schedule) => `${dayLabels[schedule.dayOfWeek]} ${schedule.startTime}-${schedule.endTime}`)
+          .join(', ')
+      : `${constraints.startHour}:00-${constraints.endHour}:00`
+
+  const activeAppointments = useMemo(
+    () =>
+      appointments.filter(
+        (appointment) => appointment.doctorId === doctorId && appointment.status !== 'cancelled',
+      ),
+    [appointments, doctorId],
+  )
+
+  const todayAppointments = useMemo(() => {
+    const todayKey = new Date().toISOString().slice(0, 10)
+    return activeAppointments.filter((appointment) => appointment.start.slice(0, 10) === todayKey)
+  }, [activeAppointments])
+
+  const receptionTasks = useMemo(() => {
+    const now = new Date()
+    const needsConfirmation = activeAppointments.filter((appointment) => {
+      const status = getAppointmentStatus(appointment)
+      return new Date(appointment.start) >= now && (status === 'pending' || status === 'scheduled')
+    })
+    const unpaid = activeAppointments.filter((appointment) => !appointment.paymentType)
+    const incompletePatients = doctorPatients.filter(
+      (patient) => !patient.phone || !patient.address || !patient.historyDate,
+    )
+    const pendingCalls = activeAppointments.filter((appointment) =>
+      (appointment.notes ?? '').toLowerCase().includes('llamar'),
+    )
+    return { needsConfirmation, unpaid, incompletePatients, pendingCalls }
+  }, [activeAppointments, doctorPatients])
+
+  const occupancy = useMemo(() => {
+    const availableMinutes = Math.max(0, (constraints.endHour - constraints.startHour) * 60)
+    const occupiedMinutes = todayAppointments.reduce(
+      (total, appointment) =>
+        total +
+        Math.max(0, Math.round((new Date(appointment.end).getTime() - new Date(appointment.start).getTime()) / 60000)),
+      0,
+    )
+    const saturation = availableMinutes === 0 ? 0 : Math.min(100, Math.round((occupiedMinutes / availableMinutes) * 100))
+    return {
+      occupiedMinutes,
+      availableMinutes,
+      saturation,
+      freeMinutes: Math.max(0, availableMinutes - occupiedMinutes),
+      freeSlots: constraints.slotMinutes > 0 ? Math.floor(Math.max(0, availableMinutes - occupiedMinutes) / constraints.slotMinutes) : 0,
+    }
+  }, [constraints.endHour, constraints.slotMinutes, constraints.startHour, todayAppointments])
+
+  const globalResults = useMemo(() => {
+    const normalized = globalSearch.trim().toLowerCase()
+    if (!normalized) return []
+    const unitById = new Map(units.map((unit) => [unit.id, unit]))
+    const doctorById = new Map(doctors.map((doctor) => [doctor.id, doctor]))
+    const patientMatches = patients
+      .filter((patient) => {
+        const doctor = doctorById.get(patient.doctorId)
+        if (unitId && doctor?.unitId !== unitId) return false
+        return `${patient.name} ${patient.phone ?? ''} ${patient.address ?? ''}`.toLowerCase().includes(normalized)
+      })
+      .slice(0, 5)
+      .map((patient) => ({
+        type: 'Paciente',
+        title: patient.name,
+        detail: `${patient.phone ?? 'Sin teléfono'} · ${doctorById.get(patient.doctorId)?.name ?? 'Doctor'}`,
+      }))
+    const doctorMatches = unitDoctors
+      .filter((doctor) => `${doctor.name} ${doctor.phone ?? ''}`.toLowerCase().includes(normalized))
+      .slice(0, 5)
+      .map((doctor) => ({
+        type: 'Doctor',
+        title: doctor.name,
+        detail: unitById.get(doctor.unitId)?.name ?? 'Unidad',
+      }))
+    const appointmentMatches = appointments
+      .filter((appointment) => {
+        const doctor = doctorById.get(appointment.doctorId)
+        if (unitId && doctor?.unitId !== unitId) return false
+        return `${appointment.title} ${appointment.status ?? ''}`.toLowerCase().includes(normalized)
+      })
+      .slice(0, 5)
+      .map((appointment) => ({
+        type: 'Cita',
+        title: appointment.title,
+        detail: `${new Date(appointment.start).toLocaleString('es-MX')} · ${doctorById.get(appointment.doctorId)?.name ?? 'Doctor'}`,
+      }))
+    return [...patientMatches, ...doctorMatches, ...appointmentMatches].slice(0, 10)
+  }, [appointments, doctors, globalSearch, patients, unitDoctors, unitId, units])
 
   const events = useMemo(() => {
-    const filtered = appointments.filter((appointment) => appointment.doctorId === doctorId)
+    const filtered = appointments.filter(
+      (appointment) => appointment.doctorId === doctorId && appointment.status !== 'cancelled',
+    )
     const byPatientId =
       patientFilterId === 'all'
         ? filtered
@@ -105,13 +318,48 @@ function ReceptionistDashboard() {
               ?.name
             return patientName ? patientName.toLowerCase().includes(normalized) : false
           })
-    return scoped.map((appointment) => ({
-      id: appointment.id,
-      title: appointment.title,
-      start: appointment.start,
-      end: appointment.end,
-    }))
-  }, [appointments, doctorId, patientFilterId, patientFilterText, doctorPatients])
+    const appointmentEvents = scoped.map((appointment) => {
+      const patient = doctorPatients.find((item) => item.id === appointment.patientId)
+      const title = patient?.phone ? `${appointment.title} · ${patient.phone}` : appointment.title
+      return {
+        id: appointment.id,
+        title,
+        start: appointment.start,
+        end: appointment.end,
+        extendedProps: {
+          patientName: appointment.title,
+          patientPhone: patient?.phone ?? '',
+        },
+        backgroundColor: getAppointmentColor(appointment),
+        borderColor: getAppointmentColor(appointment),
+        textColor: getAppointmentColor(appointment) ? '#fff' : undefined,
+      }
+    })
+    const blockedEvents = selectedDoctorBlocks.map((block) => {
+      const title = block.reason ? `Bloqueado: ${block.reason}` : 'Bloqueado'
+      if (block.recurrenceType === 'weekly') {
+        return {
+          id: `blocked-${block.id}`,
+          title,
+          daysOfWeek: block.dayOfWeek === undefined ? [] : [block.dayOfWeek],
+          startTime: block.startTime,
+          endTime: block.endTime,
+          display: 'background',
+          color: '#ef9a9a',
+        }
+      }
+
+      return {
+        id: `blocked-${block.id}`,
+        title,
+        start: block.start,
+        end: block.end,
+        display: 'background',
+        color: '#ef9a9a',
+      }
+    })
+    return [...appointmentEvents, ...blockedEvents]
+  }, [appointments, doctorId, patientFilterId, patientFilterText, doctorPatients, selectedDoctorBlocks])
 
   const handleSelect = (info: { startStr: string; endStr: string }) => {
     if (!doctorId) {
@@ -124,6 +372,9 @@ function ReceptionistDashboard() {
     setAddingPatient(false)
     setNewPatientName('')
     setNewPatientPhone('')
+    setAppointmentStatus('scheduled')
+    setPaymentType('')
+    setNotes('')
     setAppointmentStart(info.startStr)
     setDurationMinutes(diffMinutes(info.startStr, info.endStr) || constraints.slotMinutes)
     setMode('create')
@@ -145,14 +396,15 @@ function ReceptionistDashboard() {
         setError('Ingresa un nombre para el nuevo paciente.')
         return
       }
-      finalPatientId = `pat-${Date.now()}`
       finalPatientName = newPatientName.trim()
-      addPatient({
-        id: finalPatientId,
+      const createdPatient = await addPatient({
+        id: `pat-${Date.now()}`,
         doctorId,
         name: finalPatientName,
         phone: newPatientPhone.trim() || undefined,
       })
+      finalPatientId = createdPatient.id
+      finalPatientName = createdPatient.name
     }
 
     const patientName =
@@ -163,6 +415,17 @@ function ReceptionistDashboard() {
     }
 
     const end = addMinutes(appointmentStart, durationMinutes)
+    const startDate = new Date(appointmentStart)
+    const endDate = new Date(end)
+    if (!isWithinSchedule(startDate, endDate, selectedDoctorSchedules)) {
+      setError('La cita está fuera del horario disponible del doctor.')
+      return
+    }
+    if (isBlocked(startDate, endDate)) {
+      setError('La cita se cruza con un horario bloqueado.')
+      return
+    }
+
     const appointment: Appointment = {
       id: mode === 'edit' && editingId ? editingId : `apt-${Date.now()}`,
       doctorId,
@@ -170,6 +433,10 @@ function ReceptionistDashboard() {
       title: patientName,
       start: appointmentStart,
       end,
+      status: appointmentStatus,
+      attended: appointmentStatus === 'attended',
+      paymentType: paymentType || undefined,
+      notes: notes.trim() || undefined,
     }
 
     const result =
@@ -195,6 +462,8 @@ function ReceptionistDashboard() {
           Selecciona un doctor, luego agrega o mueve citas. Hay vista semanal y mensual.
         </Typography>
       </Box>
+
+      <ReceptionistTabs />
 
       <Paper sx={{ p: 2 }} elevation={2}>
         <Stack spacing={2}>
@@ -222,12 +491,35 @@ function ReceptionistDashboard() {
               <ToggleButton value="dayGridMonth">Mes</ToggleButton>
             </ToggleButtonGroup>
             <Typography variant="body2" color="text.secondary">
-              Horario: {constraints.startHour}:00 - {constraints.endHour}:00
+              Horario: {scheduleSummary}
             </Typography>
-            <Button component={Link} to="/reception/patients" variant="outlined" size="small">
-              Agregar pacientes
-            </Button>
           </Stack>
+          <TextField
+            label="Búsqueda global"
+            value={globalSearch}
+            onChange={(event) => setGlobalSearch(event.target.value)}
+            placeholder="Paciente, teléfono, doctor, cita o unidad"
+            fullWidth
+          />
+          {globalResults.length > 0 && (
+            <Stack spacing={1}>
+              {globalResults.map((result, index) => (
+                <Paper key={`${result.type}-${result.title}-${index}`} sx={{ p: 1.5 }} elevation={0}>
+                  <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} alignItems={{ sm: 'center' }}>
+                    <Chip label={result.type} size="small" />
+                    <Box>
+                      <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                        {result.title}
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        {result.detail}
+                      </Typography>
+                    </Box>
+                  </Stack>
+                </Paper>
+              ))}
+            </Stack>
+          )}
           <Stack direction={{ xs: 'column', md: 'row' }} spacing={2} alignItems="center">
             <TextField
               label="Filtrar por paciente"
@@ -253,6 +545,42 @@ function ReceptionistDashboard() {
               onChange={(event) => setPatientFilterText(event.target.value)}
               sx={{ minWidth: 240, flex: 1 }}
             />
+          </Stack>
+        </Stack>
+      </Paper>
+
+      <Box
+        sx={{
+          display: 'grid',
+          gridTemplateColumns: { xs: '1fr 1fr', md: 'repeat(5, 1fr)' },
+          gap: 2,
+        }}
+      >
+        {[
+          ['Por confirmar', receptionTasks.needsConfirmation.length],
+          ['Citas sin pago', receptionTasks.unpaid.length],
+          ['Pacientes incompletos', receptionTasks.incompletePatients.length],
+          ['Llamadas pendientes', receptionTasks.pendingCalls.length],
+          ['Huecos libres hoy', occupancy.freeSlots],
+        ].map(([label, value]) => (
+          <Paper key={label} sx={{ p: 2 }} elevation={2}>
+            <Typography variant="caption" color="text.secondary">
+              {label}
+            </Typography>
+            <Typography variant="h6" sx={{ fontWeight: 700 }}>
+              {value}
+            </Typography>
+          </Paper>
+        ))}
+      </Box>
+
+      <Paper sx={{ p: 2 }} elevation={2}>
+        <Stack spacing={1}>
+          <Typography variant="h6">Ocupación de hoy</Typography>
+          <Stack direction={{ xs: 'column', md: 'row' }} spacing={2}>
+            <Chip label={`${occupancy.saturation}% saturación`} />
+            <Chip label={`${Math.round(occupancy.occupiedMinutes / 60)} h ocupadas`} />
+            <Chip label={`${Math.round(occupancy.freeMinutes / 60)} h libres`} />
           </Stack>
         </Stack>
       </Paper>
@@ -298,6 +626,30 @@ function ReceptionistDashboard() {
           selectable
           editable
           events={events}
+          eventContent={(info) => {
+            const patientName = String(info.event.extendedProps.patientName || info.event.title)
+            const patientPhone = String(info.event.extendedProps.patientPhone || '')
+            return (
+              <Box sx={{ lineHeight: 1.15, overflow: 'hidden' }}>
+                <Typography
+                  component="div"
+                  variant="caption"
+                  sx={{ fontWeight: 700, color: 'inherit', whiteSpace: 'normal' }}
+                >
+                  {patientName}
+                </Typography>
+                {patientPhone && (
+                  <Typography
+                    component="div"
+                    variant="caption"
+                    sx={{ color: 'inherit', whiteSpace: 'normal' }}
+                  >
+                    {patientPhone}
+                  </Typography>
+                )}
+              </Box>
+            )
+          }}
           datesSet={(info) => setCalendarTitle(info.view.title)}
           select={handleSelect}
           dateClick={(info) => {
@@ -313,6 +665,7 @@ function ReceptionistDashboard() {
               ...appointment,
               start: info.event.start?.toISOString() ?? appointment.start,
               end: info.event.end?.toISOString() ?? appointment.end,
+              status: 'rescheduled',
             })
             if (!result.ok) {
               setError(result.reason ?? 'No se pudo mover la cita.')
@@ -341,6 +694,9 @@ function ReceptionistDashboard() {
             setAddingPatient(false)
             setNewPatientName('')
             setNewPatientPhone('')
+            setAppointmentStatus(getAppointmentStatus(appointment))
+            setPaymentType(appointment.paymentType ?? '')
+            setNotes(appointment.notes ?? '')
             setMode('edit')
             setEditingId(appointment.id)
             setError(null)
@@ -349,12 +705,17 @@ function ReceptionistDashboard() {
           slotMinTime={`${constraints.startHour.toString().padStart(2, '0')}:00:00`}
           slotMaxTime={`${constraints.endHour.toString().padStart(2, '0')}:00:00`}
           slotDuration={`00:${constraints.slotMinutes.toString().padStart(2, '0')}:00`}
-          businessHours={{
-            daysOfWeek: [0, 1, 2, 3, 4, 5, 6],
-            startTime: `${constraints.startHour.toString().padStart(2, '0')}:00`,
-            endTime: `${constraints.endHour.toString().padStart(2, '0')}:00`,
-          }}
+          businessHours={businessHours}
           selectConstraint="businessHours"
+          eventConstraint="businessHours"
+          selectAllow={(info) =>
+            isWithinSchedule(info.start, info.end, selectedDoctorSchedules) &&
+            !isBlocked(info.start, info.end)
+          }
+          eventAllow={(dropInfo) =>
+            isWithinSchedule(dropInfo.start, dropInfo.end, selectedDoctorSchedules) &&
+            !isBlocked(dropInfo.start, dropInfo.end)
+          }
           eventOverlap={constraints.allowOverlap}
           selectOverlap={constraints.allowOverlap}
         />
@@ -368,6 +729,9 @@ function ReceptionistDashboard() {
           setAddingPatient(false)
           setNewPatientName('')
           setNewPatientPhone('')
+          setAppointmentStatus('scheduled')
+          setPaymentType('')
+          setNotes('')
           setError(null)
         }}
         maxWidth="xs"
@@ -392,6 +756,18 @@ function ReceptionistDashboard() {
                   </MenuItem>
                 ))}
               </TextField>
+            )}
+            {!addingPatient && selectedPatient && (
+              <Paper sx={{ p: 1.5 }} elevation={0}>
+                <Stack spacing={0.5}>
+                  <Typography variant="caption" color="text.secondary">
+                    Teléfono del paciente
+                  </Typography>
+                  <Typography variant="body1" sx={{ fontWeight: 700 }}>
+                    {selectedPatient.phone || 'Sin teléfono registrado'}
+                  </Typography>
+                </Stack>
+              </Paper>
             )}
             {mode === 'create' && (
               <>
@@ -421,7 +797,20 @@ function ReceptionistDashboard() {
                 )}
               </>
             )}
-            <TextField label="Inicio" value={appointmentStart} disabled />
+            <TextField
+              label="Inicio"
+              type="datetime-local"
+              value={toDateTimeLocalValue(appointmentStart)}
+              onChange={(event) => {
+                const nextStart = fromDateTimeLocalValue(event.target.value)
+                setAppointmentStart(nextStart)
+                if (mode === 'edit') {
+                  setAppointmentStatus('rescheduled')
+                }
+              }}
+              InputLabelProps={{ shrink: true }}
+              inputProps={{ step: 60 }}
+            />
             <TextField
               label="Duración (minutos)"
               type="number"
@@ -431,14 +820,61 @@ function ReceptionistDashboard() {
             />
             <TextField
               label="Fin"
-              value={appointmentStart ? addMinutes(appointmentStart, durationMinutes) : ''}
-              disabled
+              type="datetime-local"
+              value={appointmentStart ? toDateTimeLocalValue(addMinutes(appointmentStart, durationMinutes)) : ''}
+              onChange={(event) => {
+                const nextEnd = fromDateTimeLocalValue(event.target.value)
+                if (appointmentStart && nextEnd) {
+                  setDurationMinutes(diffMinutes(appointmentStart, nextEnd))
+                  if (mode === 'edit') {
+                    setAppointmentStatus('rescheduled')
+                  }
+                }
+              }}
+              InputLabelProps={{ shrink: true }}
+              inputProps={{ step: 60 }}
+            />
+            <TextField
+              label="Estado"
+              select
+              value={appointmentStatus}
+              onChange={(event) => setAppointmentStatus(event.target.value as AppointmentStatus)}
+            >
+              {appointmentStatuses.map((status) => (
+                <MenuItem key={status.value} value={status.value}>
+                  {status.label}
+                </MenuItem>
+              ))}
+            </TextField>
+            <TextField
+              label="Tipo de pago"
+              select
+              value={paymentType}
+              onChange={(event) => setPaymentType(event.target.value)}
+            >
+              <MenuItem value="">Sin definir</MenuItem>
+              {paymentTypes.map((item) => (
+                <MenuItem key={item.value} value={item.value}>
+                  {item.label}
+                </MenuItem>
+              ))}
+            </TextField>
+            <TextField
+              label="Notas"
+              value={notes}
+              onChange={(event) => setNotes(event.target.value)}
+              multiline
+              minRows={3}
             />
           </Stack>
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setDialogOpen(false)}>Cancelar</Button>
-          <Button variant="contained" onClick={handleSave} disabled={!patientId}>
+          <Button
+            variant="contained"
+            onClick={handleSave}
+            disabled={addingPatient ? !newPatientName.trim() : !patientId}
+          >
             {mode === 'edit' ? 'Actualizar' : 'Guardar'}
           </Button>
         </DialogActions>

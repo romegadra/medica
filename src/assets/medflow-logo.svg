@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="260" height="72" viewBox="0 0 260 72" role="img" aria-labelledby="title">
+  <title id="title">MedFlow</title>
+  <rect width="260" height="72" rx="8" fill="#ffffff"/>
+  <rect x="1" y="1" width="258" height="70" rx="7" fill="none" stroke="#d7dde3" stroke-width="2"/>
+  <circle cx="34" cy="36" r="18" fill="#e8f5f1"/>
+  <path d="M34 22c2 8 8 12 16 14-8 2-14 6-16 14-2-8-8-12-16-14 8-2 14-6 16-14Z" fill="#2c7a4b"/>
+  <path d="M34 28v16M26 36h16" stroke="#ffffff" stroke-width="3" stroke-linecap="round"/>
+  <text x="62" y="45" font-family="Inter, Arial, Helvetica, sans-serif" font-size="30" font-weight="700" letter-spacing="0">
+    <tspan fill="#0f5f6b">Med</tspan><tspan fill="#2c7a4b">Flow</tspan>
+  </text>
+</svg>

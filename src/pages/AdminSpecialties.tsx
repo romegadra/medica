@@ -67,32 +67,34 @@ function AdminSpecialties() {
         </Stack>
       </Paper>
 
-      <Paper sx={{ p: 3 }} elevation={2}>
+      <Paper sx={{ p: { xs: 2, md: 3 }, overflow: 'hidden' }} elevation={2}>
         <Stack spacing={1}>
           <Typography variant="h6">Especialidades actuales</Typography>
-          <Table size="small">
-            <TableHead>
-              <TableRow>
-                <TableCell>Especialidad</TableCell>
-                <TableCell align="right">Acciones</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {specialties.map((specialty) => (
-                <TableRow key={specialty.id}>
-                  <TableCell>{specialty.name}</TableCell>
-                  <TableCell align="right">
-                    <IconButton size="small" onClick={() => setEditingSpecialty(specialty)}>
-                      <EditIcon fontSize="small" />
-                    </IconButton>
-                    <IconButton size="small" onClick={() => setDeleteSpecialty(specialty)}>
-                      <DeleteIcon fontSize="small" />
-                    </IconButton>
-                  </TableCell>
+          <Box sx={{ width: '100%', overflowX: 'auto' }}>
+            <Table size="small" sx={{ minWidth: 420 }}>
+              <TableHead>
+                <TableRow>
+                  <TableCell>Especialidad</TableCell>
+                  <TableCell align="right">Acciones</TableCell>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHead>
+              <TableBody>
+                {specialties.map((specialty) => (
+                  <TableRow key={specialty.id}>
+                    <TableCell>{specialty.name}</TableCell>
+                    <TableCell align="right">
+                      <IconButton size="small" onClick={() => setEditingSpecialty(specialty)}>
+                        <EditIcon fontSize="small" />
+                      </IconButton>
+                      <IconButton size="small" onClick={() => setDeleteSpecialty(specialty)}>
+                        <DeleteIcon fontSize="small" />
+                      </IconButton>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </Box>
         </Stack>
       </Paper>
 
