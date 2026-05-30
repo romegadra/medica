@@ -21,6 +21,16 @@ import { useAuth } from '../auth/AuthContext'
 import { useData } from '../data/DataContext'
 import DoctorTabs from '../components/DoctorTabs'
 
+function formatVisitDate(value: string) {
+  const [year, month, day] = value.split('-').map(Number)
+  if (!year || !month || !day) return value
+  return new Intl.DateTimeFormat('es-MX', {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+  }).format(new Date(year, month - 1, day))
+}
+
 function DoctorVisits() {
   const { doctorId } = useAuth()
   const { doctors, patients, specialtyTemplates, visits, addVisit } = useData()
@@ -170,7 +180,7 @@ function DoctorVisits() {
                     visit.responses.diagnostico || visit.responses.motivo || visit.responses.notas || '-'
                   return (
                     <TableRow key={visit.id} hover onClick={() => setSelectedVisit(visit)}>
-                      <TableCell>{visit.date}</TableCell>
+                      <TableCell>{formatVisitDate(visit.date)}</TableCell>
                       <TableCell>{patient?.name ?? 'Paciente'}</TableCell>
                       <TableCell>{resumen}</TableCell>
                     </TableRow>
@@ -192,7 +202,7 @@ function DoctorVisits() {
         <DialogContent>
           <Stack spacing={2} sx={{ mt: 1 }}>
             <Typography variant="body2" color="text.secondary">
-              Fecha: {selectedVisit?.date}
+              Fecha: {selectedVisit ? formatVisitDate(selectedVisit.date) : ''}
             </Typography>
             <Typography variant="body2" color="text.secondary">
               Paciente:{' '}

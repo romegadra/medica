@@ -1,4 +1,4 @@
-import { Alert, AppBar, Box, Button, Container, LinearProgress, Toolbar, Typography } from '@mui/material'
+import { Alert, AppBar, Box, Button, Container, LinearProgress, Toolbar } from '@mui/material'
 import { Link, Navigate, Route, Routes } from 'react-router-dom'
 import { useAuth } from './auth/AuthContext'
 import ProtectedRoute from './components/ProtectedRoute'
@@ -43,23 +43,19 @@ function App() {
             py: { xs: 1, sm: 0 },
           }}
         >
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 1.5, sm: 2 }, minWidth: 0 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', minWidth: 0 }}>
             <Box
               component="img"
               src={logoUrl || defaultLogo}
               alt={currentUnit?.name ?? 'MedFlow'}
-              sx={{ height: { xs: 48, sm: 72 }, maxWidth: { xs: 128, sm: 180 }, objectFit: 'contain', flexShrink: 0 }}
+              sx={{
+                height: { xs: 52, sm: 72 },
+                width: 'auto',
+                maxWidth: { xs: 210, sm: 260 },
+                objectFit: 'contain',
+                flexShrink: 1,
+              }}
             />
-            <Box sx={{ minWidth: 0 }}>
-              <Typography variant="h6" noWrap sx={{ fontWeight: 600 }}>
-                MedFlow
-              </Typography>
-              {currentUnit?.name && (
-                <Typography variant="caption" color="text.secondary" noWrap sx={{ display: 'block' }}>
-                  {currentUnit.name}
-                </Typography>
-              )}
-            </Box>
           </Box>
           {role && (
             <Box

@@ -1,11 +1,11 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="220" height="72" viewBox="0 0 220 72" role="img" aria-labelledby="title">
+<svg xmlns="http://www.w3.org/2000/svg" width="260" height="72" viewBox="0 0 260 72" role="img" aria-labelledby="title">
   <title id="title">MedFlow</title>
-  <rect width="220" height="72" rx="8" fill="#ffffff"/>
-  <rect x="1" y="1" width="218" height="70" rx="7" fill="none" stroke="#d7dde3" stroke-width="2"/>
-  <path d="M24 48V24h8l8 14 8-14h8v24h-7V34l-7 12h-4l-7-12v14h-7Z" fill="#0f5f6b"/>
-  <path d="M67 48V24h19v6H74v3h11v6H74v3h13v6H67Z" fill="#0f5f6b"/>
-  <path d="M95 48V24h10c8 0 14 5 14 12s-6 12-14 12H95Zm7-6h3c4 0 7-2 7-6s-3-6-7-6h-3v12Z" fill="#0f5f6b"/>
-  <path d="M128 48V24h18v6h-11v4h10v6h-10v8h-7Z" fill="#2c7a4b"/>
-  <path d="M153 48V24h7v18h11v6h-18Z" fill="#2c7a4b"/>
-  <path d="M177 36c0-7 5-13 13-13s13 6 13 13-5 13-13 13-13-6-13-13Zm7 0c0 4 2 7 6 7s6-3 6-7-2-7-6-7-6 3-6 7Z" fill="#2c7a4b"/>
+  <rect width="260" height="72" rx="8" fill="#ffffff"/>
+  <rect x="1" y="1" width="258" height="70" rx="7" fill="none" stroke="#d7dde3" stroke-width="2"/>
+  <circle cx="34" cy="36" r="18" fill="#e8f5f1"/>
+  <path d="M34 22c2 8 8 12 16 14-8 2-14 6-16 14-2-8-8-12-16-14 8-2 14-6 16-14Z" fill="#2c7a4b"/>
+  <path d="M34 28v16M26 36h16" stroke="#ffffff" stroke-width="3" stroke-linecap="round"/>
+  <text x="62" y="45" font-family="Inter, Arial, Helvetica, sans-serif" font-size="30" font-weight="700" letter-spacing="0">
+    <tspan fill="#0f5f6b">Med</tspan><tspan fill="#2c7a4b">Flow</tspan>
+  </text>
 </svg>
