@@ -19,10 +19,12 @@ import {
 } from '@mui/material'
 import DeleteIcon from '@mui/icons-material/Delete'
 import EditIcon from '@mui/icons-material/Edit'
+import UploadIcon from '@mui/icons-material/Upload'
 import { useState } from 'react'
 import { useAuth } from '../auth/AuthContext'
 import { useData } from '../data/DataContext'
 import type { Unit } from '../data/types'
+import { readSmallImage } from '../utils/images'
 
 function AdminUnits() {
   const { role, unitId } = useAuth()
@@ -34,6 +36,7 @@ function AdminUnits() {
   const [phone, setPhone] = useState('')
   const [adminName, setAdminName] = useState('')
   const [logoUrl, setLogoUrl] = useState('')
+  const [imageError, setImageError] = useState<string | null>(null)
   const [editingUnit, setEditingUnit] = useState<Unit | null>(null)
   const [deleteUnit, setDeleteUnit] = useState<Unit | null>(null)
 
@@ -76,6 +79,21 @@ function AdminUnits() {
     if (!deleteUnit) return
     removeUnit(deleteUnit.id)
     setDeleteUnit(null)
+  }
+
+  const handleLogoFile = async (file: File | undefined, target: 'new' | 'edit') => {
+    if (!file) return
+    try {
+      const dataUrl = await readSmallImage(file)
+      if (target === 'new') {
+        setLogoUrl(dataUrl)
+      } else {
+        setEditingUnit((prev) => (prev ? { ...prev, logoUrl: dataUrl } : prev))
+      }
+      setImageError(null)
+    } catch (err) {
+      setImageError(err instanceof Error ? err.message : 'No se pudo cargar la imagen.')
+    }
   }
 
   return (
@@ -127,6 +145,28 @@ function AdminUnits() {
               onChange={(event) => setLogoUrl(event.target.value)}
               placeholder="https://..."
             />
+            <Button component="label" variant="outlined" startIcon={<UploadIcon />}>
+              Subir logotipo
+              <input
+                hidden
+                type="file"
+                accept="image/png,image/jpeg,image/webp"
+                onChange={(event) => void handleLogoFile(event.target.files?.[0], 'new')}
+              />
+            </Button>
+            {imageError && (
+              <Typography variant="caption" color="error">
+                {imageError}
+              </Typography>
+            )}
+            {logoUrl && (
+              <Box
+                component="img"
+                src={logoUrl}
+                alt="Vista previa del logotipo"
+                sx={{ maxHeight: 72, maxWidth: '100%', objectFit: 'contain', alignSelf: 'flex-start' }}
+              />
+            )}
             <Button variant="contained" onClick={handleAdd} disabled={!name.trim()}>
               Agregar unidad
             </Button>
@@ -241,6 +281,20 @@ function AdminUnits() {
               }
               placeholder="https://..."
             />
+            <Button component="label" variant="outlined" startIcon={<UploadIcon />}>
+              Subir logotipo
+              <input
+                hidden
+                type="file"
+                accept="image/png,image/jpeg,image/webp"
+                onChange={(event) => void handleLogoFile(event.target.files?.[0], 'edit')}
+              />
+            </Button>
+            {imageError && (
+              <Typography variant="caption" color="error">
+                {imageError}
+              </Typography>
+            )}
             {editingUnit?.logoUrl && (
               <Box
                 component="img"

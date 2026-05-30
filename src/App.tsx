@@ -1,4 +1,30 @@
-import { Alert, AppBar, Box, Button, Container, LinearProgress, Toolbar } from '@mui/material'
+import {
+  Alert,
+  AppBar,
+  Avatar,
+  Box,
+  Button,
+  Container,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
+  IconButton,
+  LinearProgress,
+  ListItemIcon,
+  ListItemText,
+  Menu,
+  MenuItem,
+  Stack,
+  TextField,
+  Toolbar,
+} from '@mui/material'
+import MenuIcon from '@mui/icons-material/Menu'
+import DashboardIcon from '@mui/icons-material/Dashboard'
+import LogoutIcon from '@mui/icons-material/Logout'
+import AccountCircleIcon from '@mui/icons-material/AccountCircle'
+import UploadIcon from '@mui/icons-material/Upload'
+import { useState } from 'react'
 import { Link, Navigate, Route, Routes } from 'react-router-dom'
 import { useAuth } from './auth/AuthContext'
 import ProtectedRoute from './components/ProtectedRoute'
@@ -22,13 +48,57 @@ import ReceptionistDoctorBlocks from './pages/ReceptionistDoctorBlocks'
 import ReceptionistPatients from './pages/ReceptionistPatients'
 import { useData } from './data/DataContext'
 import defaultLogo from './assets/medflow-logo.svg'
+import type { Doctor } from './data/types'
+import { getInitials, readSmallImage } from './utils/images'
 
 function App() {
   const { role, logout, mustChangePassword, unitId, doctorId } = useAuth()
-  const { loading, error, refresh, units, doctors } = useData()
+  const { loading, error, refresh, units, doctors, updateDoctor } = useData()
+  const [menuAnchor, setMenuAnchor] = useState<null | HTMLElement>(null)
+  const [profileOpen, setProfileOpen] = useState(false)
+  const [profileDraft, setProfileDraft] = useState<Doctor | null>(null)
+  const [profileError, setProfileError] = useState<string | null>(null)
   const currentUnitId = unitId ?? doctors.find((doctor) => doctor.id === doctorId)?.unitId
   const currentUnit = units.find((unit) => unit.id === currentUnitId)
+  const currentDoctor = doctors.find((doctor) => doctor.id === doctorId)
   const logoUrl = currentUnit?.logoUrl
+  const roleHomePath = role === 'admin' || role === 'superadmin' ? '/admin' : role === 'receptionist' ? '/reception' : '/doctor'
+  const roleLabel = role === 'admin' || role === 'superadmin' ? 'Admin' : role === 'receptionist' ? 'Recepción' : 'Doctor'
+
+  const closeMenu = () => setMenuAnchor(null)
+  const handleLogout = () => {
+    closeMenu()
+    logout()
+  }
+  const openProfile = () => {
+    closeMenu()
+    setProfileDraft(currentDoctor ?? null)
+    setProfileError(null)
+    setProfileOpen(true)
+  }
+  const handleProfileImageChange = async (file?: File) => {
+    if (!file) return
+    try {
+      const dataUrl = await readSmallImage(file)
+      setProfileDraft((prev) => (prev ? { ...prev, profileImageUrl: dataUrl } : prev))
+      setProfileError(null)
+    } catch (err) {
+      setProfileError(err instanceof Error ? err.message : 'No se pudo cargar la imagen.')
+    }
+  }
+  const handleProfileSave = () => {
+    if (!profileDraft?.name.trim()) {
+      setProfileError('El nombre es requerido.')
+      return
+    }
+    updateDoctor({
+      ...profileDraft,
+      name: profileDraft.name.trim(),
+      phone: profileDraft.phone?.trim() || undefined,
+      profileImageUrl: profileDraft.profileImageUrl || undefined,
+    })
+    setProfileOpen(false)
+  }
 
   return (
     <Box sx={{ minHeight: '100vh', bgcolor: 'background.default' }}>
@@ -58,25 +128,58 @@ function App() {
             />
           </Box>
           {role && (
-            <Box
-              sx={{
-                display: 'flex',
-                gap: 1,
-                flexShrink: 0,
-                width: { xs: '100%', sm: 'auto' },
-                justifyContent: { xs: 'center', sm: 'flex-end' },
-              }}
-            >
-              <Button
-                component={Link}
-                to={role === 'admin' || role === 'superadmin' ? '/admin' : role === 'receptionist' ? '/reception' : '/doctor'}
+            <>
+              <Stack direction="row" spacing={1} alignItems="center" sx={{ flexShrink: 0 }}>
+                {role === 'doctor' && (
+                  <Avatar
+                    src={currentDoctor?.profileImageUrl}
+                    alt={currentDoctor?.name ?? 'Doctor'}
+                    sx={{ width: 36, height: 36, bgcolor: 'primary.main', fontSize: 14 }}
+                  >
+                    {getInitials(currentDoctor?.name)}
+                  </Avatar>
+                )}
+                <IconButton
+                  aria-label="Abrir menú"
+                  aria-controls={menuAnchor ? 'app-menu' : undefined}
+                  aria-haspopup="true"
+                  aria-expanded={menuAnchor ? 'true' : undefined}
+                  onClick={(event) => setMenuAnchor(event.currentTarget)}
+                  color="inherit"
+                >
+                  <MenuIcon />
+                </IconButton>
+              </Stack>
+              <Menu
+                id="app-menu"
+                anchorEl={menuAnchor}
+                open={Boolean(menuAnchor)}
+                onClose={closeMenu}
+                anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+                transformOrigin={{ vertical: 'top', horizontal: 'right' }}
               >
-                {role === 'admin' || role === 'superadmin' ? 'Admin' : role === 'receptionist' ? 'Recepción' : 'Doctor'}
-              </Button>
-              <Button onClick={logout} color="inherit">
-                Salir
-              </Button>
-            </Box>
+                <MenuItem component={Link} to={roleHomePath} onClick={closeMenu}>
+                  <ListItemIcon>
+                    <DashboardIcon fontSize="small" />
+                  </ListItemIcon>
+                  <ListItemText>{roleLabel}</ListItemText>
+                </MenuItem>
+                {role === 'doctor' && (
+                  <MenuItem onClick={openProfile}>
+                    <ListItemIcon>
+                      <AccountCircleIcon fontSize="small" />
+                    </ListItemIcon>
+                    <ListItemText>Mi perfil</ListItemText>
+                  </MenuItem>
+                )}
+                <MenuItem onClick={handleLogout}>
+                  <ListItemIcon>
+                    <LogoutIcon fontSize="small" />
+                  </ListItemIcon>
+                  <ListItemText>Salir</ListItemText>
+                </MenuItem>
+              </Menu>
+            </>
           )}
         </Toolbar>
       </AppBar>
@@ -249,6 +352,59 @@ function App() {
           />
         </Routes>
       </Container>
+      <Dialog open={profileOpen} onClose={() => setProfileOpen(false)} fullWidth maxWidth="xs">
+        <DialogTitle>Mi perfil</DialogTitle>
+        <DialogContent>
+          <Stack spacing={2} sx={{ mt: 1 }}>
+            {profileError && <Alert severity="warning">{profileError}</Alert>}
+            <Avatar
+              src={profileDraft?.profileImageUrl}
+              alt={profileDraft?.name ?? 'Doctor'}
+              sx={{ width: 88, height: 88, bgcolor: 'primary.main', alignSelf: 'center', fontSize: 28 }}
+            >
+              {getInitials(profileDraft?.name)}
+            </Avatar>
+            <Button component="label" variant="outlined" startIcon={<UploadIcon />}>
+              Subir foto
+              <input
+                hidden
+                type="file"
+                accept="image/png,image/jpeg,image/webp"
+                onChange={(event) => void handleProfileImageChange(event.target.files?.[0])}
+              />
+            </Button>
+            {profileDraft?.profileImageUrl && (
+              <Button
+                variant="text"
+                color="inherit"
+                onClick={() => setProfileDraft((prev) => (prev ? { ...prev, profileImageUrl: undefined } : prev))}
+              >
+                Quitar foto
+              </Button>
+            )}
+            <TextField
+              label="Nombre"
+              value={profileDraft?.name ?? ''}
+              onChange={(event) =>
+                setProfileDraft((prev) => (prev ? { ...prev, name: event.target.value } : prev))
+              }
+            />
+            <TextField
+              label="Teléfono"
+              value={profileDraft?.phone ?? ''}
+              onChange={(event) =>
+                setProfileDraft((prev) => (prev ? { ...prev, phone: event.target.value } : prev))
+              }
+            />
+          </Stack>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setProfileOpen(false)}>Cancelar</Button>
+          <Button variant="contained" onClick={handleProfileSave} disabled={!profileDraft?.name.trim()}>
+            Guardar
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   )
 }
