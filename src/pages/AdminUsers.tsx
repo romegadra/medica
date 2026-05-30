@@ -207,45 +207,47 @@ function AdminUsers() {
         </Stack>
       </Paper>
 
-      <Paper sx={{ p: 3 }} elevation={2}>
+      <Paper sx={{ p: { xs: 2, md: 3 }, overflow: 'hidden' }} elevation={2}>
         <Stack spacing={1}>
           <Typography variant="h6">Administradores actuales</Typography>
-          <Table size="small">
-            <TableHead>
-              <TableRow>
-                <TableCell>Correo</TableCell>
-                <TableCell>Rol</TableCell>
-                <TableCell>Unidad</TableCell>
-                <TableCell>Cambio de contraseña</TableCell>
-                <TableCell align="right">Acciones</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {admins.map((admin) => (
-                <TableRow key={admin.id}>
-                  <TableCell>{admin.email}</TableCell>
-                  <TableCell>{admin.role === 'superadmin' ? 'Admin master' : 'Admin de unidad'}</TableCell>
-                  <TableCell>
-                    {admin.role === 'superadmin'
-                      ? 'Todas'
-                      : units.find((unit) => unit.id === admin.unitId)?.name ?? '-'}
-                  </TableCell>
-                  <TableCell>{admin.mustChangePassword ? 'Pendiente' : 'Actualizada'}</TableCell>
-                  <TableCell align="right">
-                    <IconButton size="small" onClick={() => setEditingAdmin(admin)}>
-                      <EditIcon fontSize="small" />
-                    </IconButton>
-                    <IconButton size="small" onClick={() => void handleResetPassword(admin)}>
-                      <LockResetIcon fontSize="small" />
-                    </IconButton>
-                    <IconButton size="small" onClick={() => setDeleteAdmin(admin)}>
-                      <DeleteIcon fontSize="small" />
-                    </IconButton>
-                  </TableCell>
+          <Box sx={{ width: '100%', overflowX: 'auto' }}>
+            <Table size="small" sx={{ minWidth: 760 }}>
+              <TableHead>
+                <TableRow>
+                  <TableCell>Correo</TableCell>
+                  <TableCell>Rol</TableCell>
+                  <TableCell>Unidad</TableCell>
+                  <TableCell>Cambio de contraseña</TableCell>
+                  <TableCell align="right">Acciones</TableCell>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHead>
+              <TableBody>
+                {admins.map((admin) => (
+                  <TableRow key={admin.id}>
+                    <TableCell>{admin.email}</TableCell>
+                    <TableCell>{admin.role === 'superadmin' ? 'Admin master' : 'Admin de unidad'}</TableCell>
+                    <TableCell>
+                      {admin.role === 'superadmin'
+                        ? 'Todas'
+                        : units.find((unit) => unit.id === admin.unitId)?.name ?? '-'}
+                    </TableCell>
+                    <TableCell>{admin.mustChangePassword ? 'Pendiente' : 'Actualizada'}</TableCell>
+                    <TableCell align="right">
+                      <IconButton size="small" onClick={() => setEditingAdmin(admin)}>
+                        <EditIcon fontSize="small" />
+                      </IconButton>
+                      <IconButton size="small" onClick={() => void handleResetPassword(admin)}>
+                        <LockResetIcon fontSize="small" />
+                      </IconButton>
+                      <IconButton size="small" onClick={() => setDeleteAdmin(admin)}>
+                        <DeleteIcon fontSize="small" />
+                      </IconButton>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </Box>
         </Stack>
       </Paper>
 

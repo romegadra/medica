@@ -134,55 +134,57 @@ function AdminUnits() {
         </Paper>
       )}
 
-      <Paper sx={{ p: 3 }} elevation={2}>
+      <Paper sx={{ p: { xs: 2, md: 3 }, overflow: 'hidden' }} elevation={2}>
         <Stack spacing={1}>
           <Typography variant="h6">Unidades actuales</Typography>
-          <Table size="small">
-            <TableHead>
-              <TableRow>
-                <TableCell>Unidad</TableCell>
-                <TableCell>Tipo</TableCell>
-                <TableCell>Dirección</TableCell>
-                <TableCell>Teléfono</TableCell>
-                <TableCell>Admin</TableCell>
-                <TableCell>Logo</TableCell>
-                <TableCell align="right">Acciones</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {units.map((unit) => (
-                <TableRow key={unit.id}>
-                  <TableCell>{unit.name}</TableCell>
-                  <TableCell>{unit.type === 'clinic' ? 'Clínica' : 'Individual'}</TableCell>
-                  <TableCell>{unit.address ?? '-'}</TableCell>
-                  <TableCell>{unit.phone ?? '-'}</TableCell>
-                  <TableCell>{unit.adminName ?? '-'}</TableCell>
-                  <TableCell>
-                    {unit.logoUrl ? (
-                      <Box
-                        component="img"
-                        src={unit.logoUrl}
-                        alt={unit.name}
-                        sx={{ maxHeight: 32, maxWidth: 96, objectFit: 'contain' }}
-                      />
-                    ) : (
-                      '-'
-                    )}
-                  </TableCell>
-                  <TableCell align="right">
-                    <IconButton size="small" onClick={() => setEditingUnit(unit)}>
-                      <EditIcon fontSize="small" />
-                    </IconButton>
-                    {canManageUnits && (
-                      <IconButton size="small" onClick={() => setDeleteUnit(unit)}>
-                        <DeleteIcon fontSize="small" />
-                      </IconButton>
-                    )}
-                  </TableCell>
+          <Box sx={{ width: '100%', overflowX: 'auto' }}>
+            <Table size="small" sx={{ minWidth: 900 }}>
+              <TableHead>
+                <TableRow>
+                  <TableCell>Unidad</TableCell>
+                  <TableCell>Tipo</TableCell>
+                  <TableCell>Dirección</TableCell>
+                  <TableCell>Teléfono</TableCell>
+                  <TableCell>Admin</TableCell>
+                  <TableCell>Logo</TableCell>
+                  <TableCell align="right">Acciones</TableCell>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHead>
+              <TableBody>
+                {units.map((unit) => (
+                  <TableRow key={unit.id}>
+                    <TableCell>{unit.name}</TableCell>
+                    <TableCell>{unit.type === 'clinic' ? 'Clínica' : 'Individual'}</TableCell>
+                    <TableCell>{unit.address ?? '-'}</TableCell>
+                    <TableCell>{unit.phone ?? '-'}</TableCell>
+                    <TableCell>{unit.adminName ?? '-'}</TableCell>
+                    <TableCell>
+                      {unit.logoUrl ? (
+                        <Box
+                          component="img"
+                          src={unit.logoUrl}
+                          alt={unit.name}
+                          sx={{ maxHeight: 32, maxWidth: 96, objectFit: 'contain' }}
+                        />
+                      ) : (
+                        '-'
+                      )}
+                    </TableCell>
+                    <TableCell align="right">
+                      <IconButton size="small" onClick={() => setEditingUnit(unit)}>
+                        <EditIcon fontSize="small" />
+                      </IconButton>
+                      {canManageUnits && (
+                        <IconButton size="small" onClick={() => setDeleteUnit(unit)}>
+                          <DeleteIcon fontSize="small" />
+                        </IconButton>
+                      )}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </Box>
         </Stack>
       </Paper>
 

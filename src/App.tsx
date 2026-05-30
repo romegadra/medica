@@ -32,28 +32,45 @@ function App() {
 
   return (
     <Box sx={{ minHeight: '100vh', bgcolor: 'background.default' }}>
-      <AppBar position="static" color="transparent" elevation={0} sx={{ pt: 1 }}>
-        <Toolbar sx={{ alignItems: 'center', minHeight: 64, position: 'relative', justifyContent: 'center' }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+      <AppBar position="static" color="transparent" elevation={0} sx={{ pt: { xs: 1, sm: 1.5 } }}>
+        <Toolbar
+          sx={{
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: 2,
+            flexWrap: { xs: 'wrap', sm: 'nowrap' },
+            px: { xs: 2, sm: 3 },
+            py: { xs: 1, sm: 0 },
+          }}
+        >
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 1.5, sm: 2 }, minWidth: 0 }}>
             <Box
               component="img"
               src={logoUrl || defaultLogo}
               alt={currentUnit?.name ?? 'MedFlow'}
-              sx={{ height: 72, maxWidth: 180, objectFit: 'contain' }}
+              sx={{ height: { xs: 48, sm: 72 }, maxWidth: { xs: 128, sm: 180 }, objectFit: 'contain', flexShrink: 0 }}
             />
-            <Box>
-              <Typography variant="h6" sx={{ fontWeight: 600 }}>
+            <Box sx={{ minWidth: 0 }}>
+              <Typography variant="h6" noWrap sx={{ fontWeight: 600 }}>
                 MedFlow
               </Typography>
               {currentUnit?.name && (
-                <Typography variant="caption" color="text.secondary">
+                <Typography variant="caption" color="text.secondary" noWrap sx={{ display: 'block' }}>
                   {currentUnit.name}
                 </Typography>
               )}
             </Box>
           </Box>
           {role && (
-            <Box sx={{ position: 'absolute', right: 0, display: 'flex', gap: 1 }}>
+            <Box
+              sx={{
+                display: 'flex',
+                gap: 1,
+                flexShrink: 0,
+                width: { xs: '100%', sm: 'auto' },
+                justifyContent: { xs: 'center', sm: 'flex-end' },
+              }}
+            >
               <Button
                 component={Link}
                 to={role === 'admin' || role === 'superadmin' ? '/admin' : role === 'receptionist' ? '/reception' : '/doctor'}
@@ -68,7 +85,7 @@ function App() {
         </Toolbar>
       </AppBar>
       {loading && <LinearProgress />}
-      <Container sx={{ py: { xs: 4, md: 6 } }}>
+      <Container maxWidth="xl" sx={{ py: { xs: 2.5, md: 6 }, px: { xs: 1.5, sm: 3 } }}>
         {error && (
           <Alert
             severity="warning"
