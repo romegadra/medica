@@ -22,7 +22,8 @@ import { useData } from '../data/DataContext'
 import DoctorTabs from '../components/DoctorTabs'
 
 function formatVisitDate(value: string) {
-  const [year, month, day] = value.split('-').map(Number)
+  const dateOnly = value.slice(0, 10)
+  const [year, month, day] = dateOnly.split('-').map(Number)
   if (!year || !month || !day) return value
   return new Intl.DateTimeFormat('es-MX', {
     day: 'numeric',
