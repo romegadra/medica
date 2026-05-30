@@ -27,12 +27,12 @@ import {
   Typography,
 } from '@mui/material'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Link } from 'react-router-dom'
 import ArrowBackIcon from '@mui/icons-material/ArrowBack'
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward'
 import { useAuth } from '../auth/AuthContext'
 import { useData } from '../data/DataContext'
 import type { Appointment, DoctorBlockedTime } from '../data/types'
+import DoctorTabs from '../components/DoctorTabs'
 
 type CalendarView = 'timeGridWeek' | 'dayGridMonth'
 type DialogMode = 'create' | 'edit'
@@ -358,6 +358,8 @@ function DoctorDashboard() {
         </Typography>
       </Box>
 
+      <DoctorTabs />
+
       <Paper sx={{ p: 2 }} elevation={2}>
         <Stack direction={{ xs: 'column', md: 'row' }} spacing={2} alignItems="center">
           <ToggleButtonGroup
@@ -369,16 +371,6 @@ function DoctorDashboard() {
             <ToggleButton value="timeGridWeek">Semana</ToggleButton>
             <ToggleButton value="dayGridMonth">Mes</ToggleButton>
           </ToggleButtonGroup>
-          {canEditPatients && (
-            <Button component={Link} to="/doctor/patients" variant="outlined" size="small">
-              Pacientes
-            </Button>
-          )}
-          {canManageVisits && (
-            <Button component={Link} to="/doctor/visits" variant="outlined" size="small">
-              Consultas
-            </Button>
-          )}
           {!canManageVisits && (
             <Typography variant="body2" color="text.secondary">
               Solo lectura. No tienes permiso para administrar citas.

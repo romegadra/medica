@@ -27,13 +27,13 @@ import {
   Switch,
   Typography,
 } from '@mui/material'
-import { Link } from 'react-router-dom'
 import ArrowBackIcon from '@mui/icons-material/ArrowBack'
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useData } from '../data/DataContext'
 import { useAuth } from '../auth/AuthContext'
 import type { Appointment, DoctorBlockedTime } from '../data/types'
+import ReceptionistTabs from '../components/ReceptionistTabs'
 
 type CalendarView = 'timeGridWeek' | 'dayGridMonth'
 type DialogMode = 'create' | 'edit'
@@ -463,6 +463,8 @@ function ReceptionistDashboard() {
         </Typography>
       </Box>
 
+      <ReceptionistTabs />
+
       <Paper sx={{ p: 2 }} elevation={2}>
         <Stack spacing={2}>
           <Stack direction={{ xs: 'column', md: 'row' }} spacing={2} alignItems="center">
@@ -491,12 +493,6 @@ function ReceptionistDashboard() {
             <Typography variant="body2" color="text.secondary">
               Horario: {scheduleSummary}
             </Typography>
-            <Button component={Link} to="/reception/patients" variant="outlined" size="small">
-              Pacientes
-            </Button>
-            <Button component={Link} to="/reception/doctor-blocks" variant="outlined" size="small">
-              Bloquear horarios
-            </Button>
           </Stack>
           <TextField
             label="Búsqueda global"

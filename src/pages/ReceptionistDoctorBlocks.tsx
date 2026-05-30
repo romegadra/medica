@@ -2,6 +2,7 @@ import { Box, MenuItem, Stack, TextField, Typography } from '@mui/material'
 import { useEffect, useMemo, useState } from 'react'
 import { useAuth } from '../auth/AuthContext'
 import DoctorBlockedTimeManager from '../components/DoctorBlockedTimeManager'
+import ReceptionistTabs from '../components/ReceptionistTabs'
 import { useData } from '../data/DataContext'
 
 function ReceptionistDoctorBlocks() {
@@ -29,6 +30,8 @@ function ReceptionistDoctorBlocks() {
           Bloquea horarios no disponibles para los doctores de tu unidad.
         </Typography>
       </Box>
+
+      <ReceptionistTabs />
 
       <TextField
         label="Doctor"

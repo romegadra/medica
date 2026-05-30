@@ -19,6 +19,7 @@ import {
 import { useEffect, useMemo, useState } from 'react'
 import { useAuth } from '../auth/AuthContext'
 import { useData } from '../data/DataContext'
+import DoctorTabs from '../components/DoctorTabs'
 
 function DoctorVisits() {
   const { doctorId } = useAuth()
@@ -78,6 +79,8 @@ function DoctorVisits() {
           Registro de consulta.
         </Typography>
       </Box>
+
+      <DoctorTabs />
 
       <Paper sx={{ p: 3 }} elevation={2}>
         <Stack spacing={2}>

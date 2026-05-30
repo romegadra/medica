@@ -23,6 +23,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useData } from '../data/DataContext'
 import { useAuth } from '../auth/AuthContext'
 import type { Patient } from '../data/types'
+import ReceptionistTabs from '../components/ReceptionistTabs'
 
 function ReceptionistPatients() {
   const { doctors, patients, addPatient, updatePatient, removePatient } = useData()
@@ -93,6 +94,8 @@ function ReceptionistPatients() {
           Agrega, edita o elimina pacientes asignados al doctor.
         </Typography>
       </Box>
+
+      <ReceptionistTabs />
 
       <Paper sx={{ p: 3 }} elevation={2}>
         <Stack spacing={2}>

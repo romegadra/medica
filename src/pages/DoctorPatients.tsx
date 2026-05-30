@@ -22,6 +22,7 @@ import { useMemo, useState } from 'react'
 import { useAuth } from '../auth/AuthContext'
 import { useData } from '../data/DataContext'
 import type { Patient } from '../data/types'
+import DoctorTabs from '../components/DoctorTabs'
 
 function DoctorPatients() {
   const { doctorId } = useAuth()
@@ -81,6 +82,8 @@ function DoctorPatients() {
           Registra pacientes para tu consulta.
         </Typography>
       </Box>
+
+      <DoctorTabs />
 
       <Paper sx={{ p: 3 }} elevation={2}>
         <Stack spacing={2}>
