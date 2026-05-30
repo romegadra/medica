@@ -6,6 +6,7 @@ export type Doctor = {
   specialtyId?: string
   phone?: string
   licenseNumber?: string
+  profileImageUrl?: string
   canEditPatients?: boolean
   canManageVisits?: boolean
   notificationsEnabled?: boolean
