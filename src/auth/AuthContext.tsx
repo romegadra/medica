@@ -25,6 +25,14 @@ const storageUnitKey = 'med.unitId'
 const storageReceptionistKey = 'med.receptionistId'
 const storageTokenKey = 'med.token'
 const storageMustChangeKey = 'med.mustChangePassword'
+const authStorageKeys = [
+  storageRoleKey,
+  storageDoctorKey,
+  storageUnitKey,
+  storageReceptionistKey,
+  storageTokenKey,
+  storageMustChangeKey,
+]
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [role, setRole] = useState<Role | null>(null)
@@ -66,14 +74,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       token,
       mustChangePassword,
       login: async (email: string, password: string) => {
+        authStorageKeys.forEach((key) => window.localStorage.removeItem(key))
+        setRole(null)
+        setDoctorId(null)
+        setUnitId(null)
+        setReceptionistId(null)
+        setToken(null)
+        setMustChangePassword(false)
+
         try {
           const response = await apiRequest<{
             token: string
             role: Role
             doctorId?: string | null
             unitId?: string | null
+            receptionistId?: string | null
             mustChangePassword?: boolean
-          }>('/auth/login', 'POST', { email, password })
+          }>('/auth/login', 'POST', { email, password }, '')
           window.localStorage.setItem(storageRoleKey, response.role)
           window.localStorage.setItem(storageTokenKey, response.token)
           if (response.doctorId) {
@@ -86,7 +103,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           } else {
             window.localStorage.removeItem(storageUnitKey)
           }
-          window.localStorage.removeItem(storageReceptionistKey)
+          if (response.receptionistId) {
+            window.localStorage.setItem(storageReceptionistKey, response.receptionistId)
+          } else {
+            window.localStorage.removeItem(storageReceptionistKey)
+          }
           if (response.mustChangePassword) {
             window.localStorage.setItem(storageMustChangeKey, 'true')
           } else {
@@ -95,12 +116,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setRole(response.role)
           setDoctorId(response.doctorId ?? null)
           setUnitId(response.unitId ?? null)
-          setReceptionistId(null)
+          setReceptionistId(response.receptionistId ?? null)
           setToken(response.token)
           setMustChangePassword(Boolean(response.mustChangePassword))
           return { ok: true }
         } catch (err) {
-          const message = err instanceof Error ? err.message : 'Error de autenticación'
+          const status = err instanceof Error ? (err as Error & { status?: number }).status : undefined
+          const message =
+            status === 401
+              ? 'Correo o contraseña incorrectos.'
+              : err instanceof Error
+                ? err.message
+                : 'Error de autenticación'
           return { ok: false, error: message }
         }
       },
