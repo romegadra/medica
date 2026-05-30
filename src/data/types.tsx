@@ -8,6 +8,7 @@ export type Doctor = {
   licenseNumber?: string
   canEditPatients?: boolean
   canManageVisits?: boolean
+  notificationsEnabled?: boolean
 }
 
 export type Patient = {
@@ -80,6 +81,7 @@ export type Appointment = {
   paymentType?: string
   cancellationReason?: string
   cancelledAt?: string
+  reminderSentAt?: string
 }
 
 export type DoctorSchedule = {
@@ -107,6 +109,8 @@ export type Constraints = {
   endHour: number
   slotMinutes: number
   allowOverlap: boolean
+  appointmentRemindersEnabled: boolean
+  appointmentReminderIntervalMinutes: number
 }
 
 export type AuditLog = {

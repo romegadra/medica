@@ -25,9 +25,9 @@ import { useData } from '../data/DataContext'
 import type { Unit } from '../data/types'
 
 function AdminUnits() {
-  const { role } = useAuth()
+  const { role, unitId } = useAuth()
   const { units, addUnit, updateUnit, removeUnit } = useData()
-  const canManageUnits = role === 'superadmin'
+  const canManageUnits = role === 'superadmin' || (role === 'admin' && !unitId)
   const [name, setName] = useState('')
   const [type, setType] = useState<'clinic' | 'individual'>('clinic')
   const [address, setAddress] = useState('')

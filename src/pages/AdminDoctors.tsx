@@ -34,6 +34,7 @@ function AdminDoctors() {
   const [licenseNumber, setLicenseNumber] = useState('')
   const [canEditPatients, setCanEditPatients] = useState(true)
   const [canManageVisits, setCanManageVisits] = useState(true)
+  const [notificationsEnabled, setNotificationsEnabled] = useState(true)
   const [unitId, setUnitId] = useState(units[0]?.id ?? '')
   const [editingDoctor, setEditingDoctor] = useState<Doctor | null>(null)
   const [deleteDoctor, setDeleteDoctor] = useState<Doctor | null>(null)
@@ -53,6 +54,7 @@ function AdminDoctors() {
       licenseNumber: licenseNumber.trim() || undefined,
       canEditPatients,
       canManageVisits,
+      notificationsEnabled,
     })
     setName('')
     setEmail('')
@@ -61,6 +63,7 @@ function AdminDoctors() {
     setLicenseNumber('')
     setCanEditPatients(true)
     setCanManageVisits(true)
+    setNotificationsEnabled(true)
   }
 
   useEffect(() => {
@@ -147,6 +150,15 @@ function AdminDoctors() {
             }
             label="Permitir consultas"
           />
+          <FormControlLabel
+            control={
+              <Switch
+                checked={notificationsEnabled}
+                onChange={(event) => setNotificationsEnabled(event.target.checked)}
+              />
+            }
+            label="Recibir notificaciones"
+          />
           <TextField
             label="Unidad"
             select
@@ -181,6 +193,7 @@ function AdminDoctors() {
                 <TableCell>Numero de cedula</TableCell>
                 <TableCell>Pacientes</TableCell>
                 <TableCell>Consultas</TableCell>
+                <TableCell>Notificaciones</TableCell>
                 <TableCell>Unidad</TableCell>
                 <TableCell align="right">Acciones</TableCell>
               </TableRow>
@@ -197,6 +210,7 @@ function AdminDoctors() {
                   <TableCell>{doctor.licenseNumber ?? '-'}</TableCell>
                   <TableCell>{doctor.canEditPatients ? 'Si' : 'No'}</TableCell>
                   <TableCell>{doctor.canManageVisits ? 'Si' : 'No'}</TableCell>
+                  <TableCell>{doctor.notificationsEnabled ?? true ? 'Si' : 'No'}</TableCell>
                   <TableCell>{units.find((unit) => unit.id === doctor.unitId)?.name ?? 'Unidad'}</TableCell>
                   <TableCell align="right">
                     <IconButton size="small" onClick={() => setEditingDoctor(doctor)}>
@@ -291,6 +305,19 @@ function AdminDoctors() {
                 />
               }
               label="Permitir consultas"
+            />
+            <FormControlLabel
+              control={
+                <Switch
+                  checked={editingDoctor?.notificationsEnabled ?? true}
+                  onChange={(event) =>
+                    setEditingDoctor((prev) =>
+                      prev ? { ...prev, notificationsEnabled: event.target.checked } : prev,
+                    )
+                  }
+                />
+              }
+              label="Recibir notificaciones"
             />
             <TextField
               label="Unidad"

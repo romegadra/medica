@@ -221,4 +221,6 @@ export const constraints: Constraints = {
   endHour: 21,
   slotMinutes: 30,
   allowOverlap: false,
+  appointmentRemindersEnabled: false,
+  appointmentReminderIntervalMinutes: 60,
 }

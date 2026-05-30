@@ -11,6 +11,7 @@ import AdminUnits from './pages/AdminUnits'
 import AdminReceptionists from './pages/AdminReceptionists'
 import AdminTemplates from './pages/AdminTemplates'
 import AdminSpecialties from './pages/AdminSpecialties'
+import AdminUsers from './pages/AdminUsers'
 import DoctorDashboard from './pages/DoctorDashboard'
 import DoctorPatients from './pages/DoctorPatients'
 import DoctorVisits from './pages/DoctorVisits'
@@ -129,6 +130,14 @@ function App() {
             element={
               <ProtectedRoute allowed={['superadmin', 'admin']}>
                 <AdminUnits />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/users"
+            element={
+              <ProtectedRoute allowed={['superadmin', 'admin']}>
+                <AdminUsers />
               </ProtectedRoute>
             }
           />

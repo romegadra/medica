@@ -56,6 +56,7 @@ type DataState = {
   updateAppointment: (appointment: Appointment) => Promise<{ ok: boolean; reason?: string }>
   removeAppointment: (id: string) => void
   updateConstraints: (next: Constraints) => Promise<{ ok: boolean; reason?: string }>
+  runAppointmentReminders: () => Promise<{ ok: boolean; count?: number; reason?: string }>
 }
 
 const DataContext = createContext<DataState | undefined>(undefined)
@@ -92,6 +93,8 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     endHour: 20,
     slotMinutes: 30,
     allowOverlap: false,
+    appointmentRemindersEnabled: false,
+    appointmentReminderIntervalMinutes: 60,
   })
   const [unitList, setUnitList] = useState<Unit[]>([])
   const [doctorList, setDoctorList] = useState<Doctor[]>([])
@@ -444,6 +447,18 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
           return { ok: true }
         } catch (err) {
           const message = err instanceof Error ? err.message : 'Error al guardar restricciones'
+          return { ok: false, reason: message }
+        }
+      },
+      runAppointmentReminders: async () => {
+        try {
+          const response = await apiRequest<{ ok: boolean; count: number }>(
+            '/settings/run-appointment-reminders',
+            'POST',
+          )
+          return { ok: true, count: response.count }
+        } catch (err) {
+          const message = err instanceof Error ? err.message : 'Error al ejecutar recordatorios'
           return { ok: false, reason: message }
         }
       },
