@@ -39,6 +39,7 @@ import AdminTemplates from './pages/AdminTemplates'
 import AdminSpecialties from './pages/AdminSpecialties'
 import AdminUsers from './pages/AdminUsers'
 import DoctorDashboard from './pages/DoctorDashboard'
+import DoctorBlocks from './pages/DoctorBlocks'
 import DoctorPatients from './pages/DoctorPatients'
 import DoctorVisits from './pages/DoctorVisits'
 import ChangePassword from './pages/ChangePassword'
@@ -329,6 +330,14 @@ function App() {
             element={
               <ProtectedRoute allowed={['doctor']}>
                 <DoctorVisits />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/doctor/blocks"
+            element={
+              <ProtectedRoute allowed={['doctor']}>
+                <DoctorBlocks />
               </ProtectedRoute>
             }
           />

@@ -14,6 +14,7 @@ function DoctorTabs() {
     '/doctor',
     ...(canEditPatients ? ['/doctor/patients'] : []),
     ...(canManageVisits ? ['/doctor/visits'] : []),
+    '/doctor/blocks',
   ]
   const value = visiblePaths.includes(pathname) ? pathname : '/doctor'
 
@@ -23,6 +24,7 @@ function DoctorTabs() {
         <Tab component={Link} to="/doctor" value="/doctor" label="Agenda" />
         {canEditPatients && <Tab component={Link} to="/doctor/patients" value="/doctor/patients" label="Pacientes" />}
         {canManageVisits && <Tab component={Link} to="/doctor/visits" value="/doctor/visits" label="Consultas" />}
+        <Tab component={Link} to="/doctor/blocks" value="/doctor/blocks" label="Horarios bloqueados" />
       </Tabs>
     </Box>
   )
