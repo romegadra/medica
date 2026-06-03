@@ -37,6 +37,7 @@ function ReceptionistPatients() {
   const [phone, setPhone] = useState('')
   const [address, setAddress] = useState('')
   const [historyDate, setHistoryDate] = useState('')
+  const [patientSearch, setPatientSearch] = useState('')
   const [editingPatient, setEditingPatient] = useState<Patient | null>(null)
   const [deletePatient, setDeletePatient] = useState<Patient | null>(null)
 
@@ -44,6 +45,11 @@ function ReceptionistPatients() {
     () => patients.filter((patient) => patient.doctorId === doctorId),
     [patients, doctorId],
   )
+  const filteredPatients = useMemo(() => {
+    const normalized = patientSearch.trim().toLowerCase()
+    if (!normalized) return doctorPatients
+    return doctorPatients.filter((patient) => patient.name.toLowerCase().includes(normalized))
+  }, [doctorPatients, patientSearch])
 
   const handleAdd = () => {
     const trimmed = name.trim()
@@ -142,6 +148,13 @@ function ReceptionistPatients() {
       <Paper sx={{ p: { xs: 2, md: 3 }, overflow: 'hidden' }} elevation={2}>
         <Stack spacing={1}>
           <Typography variant="h6">Pacientes de este doctor</Typography>
+          <TextField
+            label="Buscar por nombre"
+            value={patientSearch}
+            onChange={(event) => setPatientSearch(event.target.value)}
+            size="small"
+            sx={{ maxWidth: 360 }}
+          />
           <Box sx={{ width: '100%', overflowX: 'auto' }}>
             <Table size="small" sx={{ minWidth: 680 }}>
               <TableHead>
@@ -154,7 +167,7 @@ function ReceptionistPatients() {
                 </TableRow>
               </TableHead>
               <TableBody>
-                {doctorPatients.map((patient) => (
+                {filteredPatients.map((patient) => (
                   <TableRow key={patient.id}>
                     <TableCell>{patient.name}</TableCell>
                     <TableCell>{patient.phone ?? '-'}</TableCell>
@@ -170,6 +183,15 @@ function ReceptionistPatients() {
                     </TableCell>
                   </TableRow>
                 ))}
+                {filteredPatients.length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={5}>
+                      <Typography variant="body2" color="text.secondary">
+                        No hay pacientes con ese nombre.
+                      </Typography>
+                    </TableCell>
+                  </TableRow>
+                )}
               </TableBody>
             </Table>
           </Box>

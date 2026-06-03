@@ -36,8 +36,12 @@ function AdminDoctors() {
   const [canManageVisits, setCanManageVisits] = useState(true)
   const [notificationsEnabled, setNotificationsEnabled] = useState(true)
   const [unitId, setUnitId] = useState(units[0]?.id ?? '')
+  const [doctorSearch, setDoctorSearch] = useState('')
   const [editingDoctor, setEditingDoctor] = useState<Doctor | null>(null)
   const [deleteDoctor, setDeleteDoctor] = useState<Doctor | null>(null)
+  const filteredDoctors = doctors.filter((doctor) =>
+    doctor.name.toLowerCase().includes(doctorSearch.trim().toLowerCase()),
+  )
 
   const handleAdd = () => {
     const trimmed = name.trim()
@@ -183,6 +187,13 @@ function AdminDoctors() {
       <Paper sx={{ p: { xs: 2, md: 3 }, overflow: 'hidden' }} elevation={2}>
         <Stack spacing={1}>
           <Typography variant="h6">Doctores actuales</Typography>
+          <TextField
+            label="Buscar por nombre"
+            value={doctorSearch}
+            onChange={(event) => setDoctorSearch(event.target.value)}
+            size="small"
+            sx={{ maxWidth: 360 }}
+          />
           <Box sx={{ width: '100%', overflowX: 'auto' }}>
             <Table size="small" sx={{ minWidth: 1120 }}>
               <TableHead>
@@ -200,7 +211,7 @@ function AdminDoctors() {
                 </TableRow>
               </TableHead>
               <TableBody>
-                {doctors.map((doctor) => (
+                {filteredDoctors.map((doctor) => (
                   <TableRow key={doctor.id}>
                     <TableCell>{doctor.name}</TableCell>
                     <TableCell>{doctor.email ?? '-'}</TableCell>
@@ -223,6 +234,15 @@ function AdminDoctors() {
                     </TableCell>
                   </TableRow>
                 ))}
+                {filteredDoctors.length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={10}>
+                      <Typography variant="body2" color="text.secondary">
+                        No hay doctores con ese nombre.
+                      </Typography>
+                    </TableCell>
+                  </TableRow>
+                )}
               </TableBody>
             </Table>
           </Box>
