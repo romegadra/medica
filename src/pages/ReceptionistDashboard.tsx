@@ -223,6 +223,10 @@ function ReceptionistDashboard() {
       ),
     [appointments, doctorId],
   )
+  const doctorAppointments = useMemo(
+    () => appointments.filter((appointment) => appointment.doctorId === doctorId),
+    [appointments, doctorId],
+  )
 
   const handleAgendaDateChange = (date: Date) => {
     setSelectedAgendaDate(date)
@@ -603,7 +607,7 @@ function ReceptionistDashboard() {
         }}
       >
         <AgendaSidebar
-          appointments={activeAppointments}
+          appointments={doctorAppointments}
           patients={doctorPatients}
           selectedDate={selectedAgendaDate}
           onDateChange={handleAgendaDateChange}

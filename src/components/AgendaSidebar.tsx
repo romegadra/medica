@@ -52,11 +52,24 @@ function formatTime(value: string) {
   }).format(new Date(value))
 }
 
+function formatPhone(value?: string | null) {
+  if (!value) return 'Sin teléfono'
+  const digits = value.replace(/\D/g, '')
+  const local =
+    digits.length === 12 && digits.startsWith('52')
+      ? digits.slice(2)
+      : digits.length === 13 && digits.startsWith('521')
+        ? digits.slice(3)
+        : digits
+  if (local.length === 10) {
+    return `${local.slice(0, 3)}-${local.slice(3, 6)}-${local.slice(6, 8)}-${local.slice(8)}`
+  }
+  return value
+}
+
 function AgendaSidebar({ appointments, patients, selectedDate, onDateChange }: Props) {
-  const monthLabel = new Intl.DateTimeFormat('es-MX', {
-    month: 'long',
-    year: 'numeric',
-  }).format(selectedDate)
+  const monthName = new Intl.DateTimeFormat('es-MX', { month: 'long' }).format(selectedDate)
+  const monthLabel = `${monthName} ${selectedDate.getFullYear()}`
   const selectedKey = getDateKey(selectedDate)
   const todayKey = getDateKey(new Date())
   const patientById = new Map(patients.map((patient) => [patient.id, patient]))
@@ -169,9 +182,9 @@ function AgendaSidebar({ appointments, patients, selectedDate, onDateChange }: P
                         size="small"
                         color={statusColors[status] ?? 'default'}
                       />
-                    </Stack>
+                  </Stack>
                   <Typography variant="caption" color="text.secondary">
-                    {patient?.phone ?? 'Sin teléfono'}
+                    {formatPhone(patient?.phone)}
                   </Typography>
                   </Stack>
                 </Paper>
