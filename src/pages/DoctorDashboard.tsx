@@ -135,6 +135,7 @@ function DoctorDashboard() {
     doctorSchedules,
     doctorBlockedTimes,
     patients,
+    receptionists,
     appointments,
     constraints,
     addAppointment,
@@ -166,6 +167,7 @@ function DoctorDashboard() {
   const doctor = doctors.find((item) => item.id === doctorId)
   const canEditPatients = doctor?.canEditPatients ?? true
   const canManageVisits = doctor?.canManageVisits ?? true
+  const showReceptionistOnCalendar = doctor?.showReceptionistOnCalendar ?? false
   const doctorPatients = useMemo(
     () => patients.filter((patient) => patient.doctorId === doctorId),
     [patients, doctorId],
@@ -219,6 +221,9 @@ function DoctorDashboard() {
     const appointmentEvents = activeAppointments
       .map((appointment) => {
         const patient = doctorPatients.find((item) => item.id === appointment.patientId)
+        const receptionist = showReceptionistOnCalendar
+          ? receptionists.find((item) => item.id === appointment.createdByReceptionistId)
+          : undefined
         const color = getAppointmentColor(appointment)
         return {
           id: appointment.id,
@@ -228,6 +233,7 @@ function DoctorDashboard() {
           extendedProps: {
             patientName: appointment.title,
             patientPhone: patient?.phone ?? '',
+            receptionistName: receptionist?.name ?? '',
           },
           backgroundColor: color,
           borderColor: color,
@@ -258,7 +264,7 @@ function DoctorDashboard() {
       }
     })
     return [...appointmentEvents, ...blockedEvents]
-  }, [activeAppointments, doctorPatients, selectedDoctorBlocks])
+  }, [activeAppointments, doctorPatients, receptionists, selectedDoctorBlocks, showReceptionistOnCalendar])
 
   const resetDialog = () => {
     setDialogOpen(false)
@@ -469,6 +475,7 @@ function DoctorDashboard() {
           eventContent={(info) => {
             const patientName = String(info.event.extendedProps.patientName || info.event.title)
             const patientPhone = String(info.event.extendedProps.patientPhone || '')
+            const receptionistName = String(info.event.extendedProps.receptionistName || '')
             return (
               <Box sx={{ lineHeight: 1.15, overflow: 'hidden' }}>
                 <Typography component="div" variant="caption" sx={{ fontWeight: 700, color: 'inherit', whiteSpace: 'normal' }}>
@@ -477,6 +484,11 @@ function DoctorDashboard() {
                 {patientPhone && (
                   <Typography component="div" variant="caption" sx={{ color: 'inherit', whiteSpace: 'normal' }}>
                     {patientPhone}
+                  </Typography>
+                )}
+                {receptionistName && (
+                  <Typography component="div" variant="caption" sx={{ color: 'inherit', whiteSpace: 'normal' }}>
+                    Rec: {receptionistName}
                   </Typography>
                 )}
               </Box>

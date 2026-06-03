@@ -10,6 +10,7 @@ export type Doctor = {
   canEditPatients?: boolean
   canManageVisits?: boolean
   notificationsEnabled?: boolean
+  showReceptionistOnCalendar?: boolean
 }
 
 export type Patient = {
@@ -83,6 +84,7 @@ export type Appointment = {
   cancellationReason?: string
   cancelledAt?: string
   reminderSentAt?: string
+  createdByReceptionistId?: string
 }
 
 export type DoctorSchedule = {
