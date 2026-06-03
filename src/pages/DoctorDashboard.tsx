@@ -56,6 +56,9 @@ const paymentTypes = [
   { value: 'insurance', label: 'Seguro' },
 ]
 
+const calendarSlotDuration = '00:15:00'
+const calendarSnapDuration = '00:05:00'
+
 function getAppointmentStatus(appointment: Appointment): AppointmentStatus {
   return appointment.attended ? 'attended' : appointment.status ?? 'scheduled'
 }
@@ -158,6 +161,7 @@ function DoctorDashboard() {
   const [paymentType, setPaymentType] = useState('')
   const [notes, setNotes] = useState('')
   const [error, setError] = useState<string | null>(null)
+  const [isSavingAppointment, setIsSavingAppointment] = useState(false)
   const [selectedAgendaDate, setSelectedAgendaDate] = useState(new Date())
 
   useEffect(() => {
@@ -175,6 +179,17 @@ function DoctorDashboard() {
   const selectedPatient = useMemo(
     () => doctorPatients.find((patient) => patient.id === patientId),
     [doctorPatients, patientId],
+  )
+  const editingAppointment = useMemo(
+    () => appointments.find((appointment) => appointment.id === editingId),
+    [appointments, editingId],
+  )
+  const editingReceptionist = useMemo(
+    () =>
+      showReceptionistOnCalendar && editingAppointment?.createdByReceptionistId
+        ? receptionists.find((receptionist) => receptionist.id === editingAppointment.createdByReceptionistId)
+        : undefined,
+    [editingAppointment, receptionists, showReceptionistOnCalendar],
   )
   const selectedDoctorSchedules = useMemo(
     () => doctorSchedules.filter((schedule) => schedule.doctorId === doctorId),
@@ -312,6 +327,7 @@ function DoctorDashboard() {
   }
 
   const handleSave = async () => {
+    if (isSavingAppointment) return
     if (!doctorId || !canManageVisits) {
       setError('No tienes permiso para administrar citas.')
       return
@@ -321,66 +337,71 @@ function DoctorDashboard() {
       return
     }
 
-    let finalPatientId = patientId
-    let finalPatientName: string | null = null
-    if (addingPatient) {
-      if (!canEditPatients) {
-        setError('No tienes permiso para agregar pacientes.')
+    setIsSavingAppointment(true)
+    try {
+      let finalPatientId = patientId
+      let finalPatientName: string | null = null
+      if (addingPatient) {
+        if (!canEditPatients) {
+          setError('No tienes permiso para agregar pacientes.')
+          return
+        }
+        if (!newPatientName.trim()) {
+          setError('Ingresa un nombre para el nuevo paciente.')
+          return
+        }
+        const createdPatient = await addPatient({
+          id: `pat-${Date.now()}`,
+          doctorId,
+          name: newPatientName.trim(),
+          phone: newPatientPhone.trim() || undefined,
+        })
+        finalPatientId = createdPatient.id
+        finalPatientName = createdPatient.name
+      }
+
+      const patientName =
+        finalPatientName ?? doctorPatients.find((item) => item.id === finalPatientId)?.name
+      if (!patientName) {
+        setError('Paciente no encontrado para este doctor.')
         return
       }
-      if (!newPatientName.trim()) {
-        setError('Ingresa un nombre para el nuevo paciente.')
+
+      const end = addMinutes(appointmentStart, durationMinutes)
+      const startDate = new Date(appointmentStart)
+      const endDate = new Date(end)
+      if (!isWithinSchedule(startDate, endDate, selectedDoctorSchedules)) {
+        setError('La cita está fuera de tu horario disponible.')
         return
       }
-      const createdPatient = await addPatient({
-        id: `pat-${Date.now()}`,
+      if (isBlocked(startDate, endDate)) {
+        setError('La cita se cruza con un horario bloqueado.')
+        return
+      }
+
+      const appointment: Appointment = {
+        id: mode === 'edit' && editingId ? editingId : `apt-${Date.now()}`,
         doctorId,
-        name: newPatientName.trim(),
-        phone: newPatientPhone.trim() || undefined,
-      })
-      finalPatientId = createdPatient.id
-      finalPatientName = createdPatient.name
-    }
+        patientId: finalPatientId,
+        title: patientName,
+        start: appointmentStart,
+        end,
+        status: appointmentStatus,
+        attended: appointmentStatus === 'attended',
+        paymentType: paymentType || undefined,
+        notes: notes.trim() || undefined,
+      }
 
-    const patientName =
-      finalPatientName ?? doctorPatients.find((item) => item.id === finalPatientId)?.name
-    if (!patientName) {
-      setError('Paciente no encontrado para este doctor.')
-      return
-    }
+      const result = mode === 'edit' ? await updateAppointment(appointment) : await addAppointment(appointment)
+      if (!result.ok) {
+        setError(result.reason ?? 'No se pudo guardar la cita.')
+        return
+      }
 
-    const end = addMinutes(appointmentStart, durationMinutes)
-    const startDate = new Date(appointmentStart)
-    const endDate = new Date(end)
-    if (!isWithinSchedule(startDate, endDate, selectedDoctorSchedules)) {
-      setError('La cita está fuera de tu horario disponible.')
-      return
+      resetDialog()
+    } finally {
+      setIsSavingAppointment(false)
     }
-    if (isBlocked(startDate, endDate)) {
-      setError('La cita se cruza con un horario bloqueado.')
-      return
-    }
-
-    const appointment: Appointment = {
-      id: mode === 'edit' && editingId ? editingId : `apt-${Date.now()}`,
-      doctorId,
-      patientId: finalPatientId,
-      title: patientName,
-      start: appointmentStart,
-      end,
-      status: appointmentStatus,
-      attended: appointmentStatus === 'attended',
-      paymentType: paymentType || undefined,
-      notes: notes.trim() || undefined,
-    }
-
-    const result = mode === 'edit' ? await updateAppointment(appointment) : await addAppointment(appointment)
-    if (!result.ok) {
-      setError(result.reason ?? 'No se pudo guardar la cita.')
-      return
-    }
-
-    resetDialog()
   }
 
   return (
@@ -477,7 +498,7 @@ function DoctorDashboard() {
             const patientPhone = String(info.event.extendedProps.patientPhone || '')
             const receptionistName = String(info.event.extendedProps.receptionistName || '')
             return (
-              <Box sx={{ lineHeight: 1.15, overflow: 'hidden' }}>
+              <Box className="medflow-calendar-event" sx={{ lineHeight: 1.15, overflow: 'hidden' }}>
                 <Typography component="div" variant="caption" sx={{ fontWeight: 700, color: 'inherit', whiteSpace: 'normal' }}>
                   {patientName}
                 </Typography>
@@ -551,7 +572,9 @@ function DoctorDashboard() {
           }}
           slotMinTime={`${constraints.startHour.toString().padStart(2, '0')}:00:00`}
           slotMaxTime={`${constraints.endHour.toString().padStart(2, '0')}:00:00`}
-          slotDuration={`00:${constraints.slotMinutes.toString().padStart(2, '0')}:00`}
+          slotDuration={calendarSlotDuration}
+          snapDuration={calendarSnapDuration}
+          slotLabelInterval="01:00:00"
           businessHours={businessHours}
           selectConstraint="businessHours"
           eventConstraint="businessHours"
@@ -569,7 +592,16 @@ function DoctorDashboard() {
         </Paper>
       </Box>
 
-      <Dialog open={dialogOpen} onClose={resetDialog} maxWidth="xs" fullWidth>
+      <Dialog
+        open={dialogOpen}
+        onClose={() => {
+          if (!isSavingAppointment) {
+            resetDialog()
+          }
+        }}
+        maxWidth="xs"
+        fullWidth
+      >
         <DialogTitle>{mode === 'edit' ? 'Editar cita' : 'Nueva cita'}</DialogTitle>
         <DialogContent>
           <Stack spacing={2} sx={{ mt: 1 }}>
@@ -609,6 +641,16 @@ function DoctorDashboard() {
                     Sin teléfono registrado
                   </Typography>
                 )}
+              </Paper>
+            )}
+            {mode === 'edit' && showReceptionistOnCalendar && (
+              <Paper sx={{ p: 1.5 }} elevation={0}>
+                <Typography variant="caption" color="text.secondary">
+                  Cita creada por
+                </Typography>
+                <Typography variant="body1" sx={{ fontWeight: 700 }}>
+                  {editingReceptionist?.name ?? 'No registrado'}
+                </Typography>
               </Paper>
             )}
             {mode === 'create' && canEditPatients && (
@@ -711,13 +753,15 @@ function DoctorDashboard() {
           </Stack>
         </DialogContent>
         <DialogActions>
-          <Button onClick={resetDialog}>Cancelar</Button>
+          <Button onClick={resetDialog} disabled={isSavingAppointment}>
+            Cancelar
+          </Button>
           <Button
             variant="contained"
             onClick={handleSave}
-            disabled={addingPatient ? !newPatientName.trim() : !patientId}
+            disabled={isSavingAppointment || (addingPatient ? !newPatientName.trim() : !patientId)}
           >
-            {mode === 'edit' ? 'Actualizar' : 'Guardar'}
+            {isSavingAppointment ? 'Guardando...' : mode === 'edit' ? 'Actualizar' : 'Guardar'}
           </Button>
         </DialogActions>
       </Dialog>
