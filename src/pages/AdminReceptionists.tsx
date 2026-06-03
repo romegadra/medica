@@ -19,7 +19,7 @@ import {
 } from '@mui/material'
 import DeleteIcon from '@mui/icons-material/Delete'
 import EditIcon from '@mui/icons-material/Edit'
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useData } from '../data/DataContext'
 import type { Receptionist } from '../data/types'
 
@@ -30,8 +30,14 @@ function AdminReceptionists() {
   const [address, setAddress] = useState('')
   const [phone, setPhone] = useState('')
   const [unitId, setUnitId] = useState(units[0]?.id ?? '')
+  const [receptionistSearch, setReceptionistSearch] = useState('')
   const [editingReceptionist, setEditingReceptionist] = useState<Receptionist | null>(null)
   const [deleteReceptionist, setDeleteReceptionist] = useState<Receptionist | null>(null)
+  const filteredReceptionists = useMemo(() => {
+    const normalized = receptionistSearch.trim().toLowerCase()
+    if (!normalized) return receptionists
+    return receptionists.filter((receptionist) => receptionist.name.toLowerCase().includes(normalized))
+  }, [receptionistSearch, receptionists])
 
   const handleAdd = () => {
     const trimmed = name.trim()
@@ -122,6 +128,13 @@ function AdminReceptionists() {
       <Paper sx={{ p: { xs: 2, md: 3 }, overflow: 'hidden' }} elevation={2}>
         <Stack spacing={1}>
           <Typography variant="h6">Recepcionistas actuales</Typography>
+          <TextField
+            label="Buscar por nombre"
+            value={receptionistSearch}
+            onChange={(event) => setReceptionistSearch(event.target.value)}
+            size="small"
+            sx={{ maxWidth: 360 }}
+          />
           <Box sx={{ width: '100%', overflowX: 'auto' }}>
             <Table size="small" sx={{ minWidth: 820 }}>
               <TableHead>
@@ -135,7 +148,7 @@ function AdminReceptionists() {
                 </TableRow>
               </TableHead>
               <TableBody>
-                {receptionists.map((receptionist) => (
+                {filteredReceptionists.map((receptionist) => (
                   <TableRow key={receptionist.id}>
                     <TableCell>{receptionist.name}</TableCell>
                     <TableCell>{receptionist.email ?? '-'}</TableCell>
@@ -152,6 +165,15 @@ function AdminReceptionists() {
                     </TableCell>
                   </TableRow>
                 ))}
+                {filteredReceptionists.length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={6}>
+                      <Typography variant="body2" color="text.secondary">
+                        No hay recepcionistas con ese nombre.
+                      </Typography>
+                    </TableCell>
+                  </TableRow>
+                )}
               </TableBody>
             </Table>
           </Box>

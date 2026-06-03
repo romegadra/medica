@@ -34,6 +34,7 @@ import { useData } from '../data/DataContext'
 import { useAuth } from '../auth/AuthContext'
 import type { Appointment, DoctorBlockedTime } from '../data/types'
 import ReceptionistTabs from '../components/ReceptionistTabs'
+import AgendaSidebar from '../components/AgendaSidebar'
 
 type CalendarView = 'timeGridWeek' | 'dayGridMonth'
 type DialogMode = 'create' | 'edit'
@@ -157,6 +158,7 @@ function ReceptionistDashboard() {
   const [globalSearch, setGlobalSearch] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [calendarTitle, setCalendarTitle] = useState('')
+  const [selectedAgendaDate, setSelectedAgendaDate] = useState(new Date())
   const calendarRef = useRef<FullCalendar | null>(null)
 
   useEffect(() => {
@@ -221,6 +223,15 @@ function ReceptionistDashboard() {
       ),
     [appointments, doctorId],
   )
+  const doctorAppointments = useMemo(
+    () => appointments.filter((appointment) => appointment.doctorId === doctorId),
+    [appointments, doctorId],
+  )
+
+  const handleAgendaDateChange = (date: Date) => {
+    setSelectedAgendaDate(date)
+    calendarRef.current?.getApi().gotoDate(date)
+  }
 
   const todayAppointments = useMemo(() => {
     const todayKey = new Date().toISOString().slice(0, 10)
@@ -587,7 +598,21 @@ function ReceptionistDashboard() {
 
       {error && <Alert severity="warning">{error}</Alert>}
 
-      <Paper sx={{ p: 2 }} elevation={2}>
+      <Box
+        sx={{
+          display: 'grid',
+          gridTemplateColumns: { xs: '1fr', lg: '280px minmax(0, 1fr)' },
+          gap: 2,
+          alignItems: 'start',
+        }}
+      >
+        <AgendaSidebar
+          appointments={doctorAppointments}
+          patients={doctorPatients}
+          selectedDate={selectedAgendaDate}
+          onDateChange={handleAgendaDateChange}
+        />
+        <Paper sx={{ p: 2, minWidth: 0 }} elevation={2}>
         <Stack
           direction={{ xs: 'column', md: 'row' }}
           alignItems={{ xs: 'flex-start', md: 'center' }}
@@ -719,7 +744,8 @@ function ReceptionistDashboard() {
           eventOverlap={constraints.allowOverlap}
           selectOverlap={constraints.allowOverlap}
         />
-      </Paper>
+        </Paper>
+      </Box>
 
       <Dialog
         open={dialogOpen}

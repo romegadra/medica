@@ -20,7 +20,7 @@ import {
 import DeleteIcon from '@mui/icons-material/Delete'
 import EditIcon from '@mui/icons-material/Edit'
 import UploadIcon from '@mui/icons-material/Upload'
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useAuth } from '../auth/AuthContext'
 import { useData } from '../data/DataContext'
 import type { Unit } from '../data/types'
@@ -37,8 +37,14 @@ function AdminUnits() {
   const [adminName, setAdminName] = useState('')
   const [logoUrl, setLogoUrl] = useState('')
   const [imageError, setImageError] = useState<string | null>(null)
+  const [unitSearch, setUnitSearch] = useState('')
   const [editingUnit, setEditingUnit] = useState<Unit | null>(null)
   const [deleteUnit, setDeleteUnit] = useState<Unit | null>(null)
+  const filteredUnits = useMemo(() => {
+    const normalized = unitSearch.trim().toLowerCase()
+    if (!normalized) return units
+    return units.filter((unit) => unit.name.toLowerCase().includes(normalized))
+  }, [unitSearch, units])
 
   const handleAdd = () => {
     const trimmed = name.trim()
@@ -177,6 +183,13 @@ function AdminUnits() {
       <Paper sx={{ p: { xs: 2, md: 3 }, overflow: 'hidden' }} elevation={2}>
         <Stack spacing={1}>
           <Typography variant="h6">Unidades actuales</Typography>
+          <TextField
+            label="Buscar por nombre"
+            value={unitSearch}
+            onChange={(event) => setUnitSearch(event.target.value)}
+            size="small"
+            sx={{ maxWidth: 360 }}
+          />
           <Box sx={{ width: '100%', overflowX: 'auto' }}>
             <Table size="small" sx={{ minWidth: 900 }}>
               <TableHead>
@@ -191,7 +204,7 @@ function AdminUnits() {
                 </TableRow>
               </TableHead>
               <TableBody>
-                {units.map((unit) => (
+                {filteredUnits.map((unit) => (
                   <TableRow key={unit.id}>
                     <TableCell>{unit.name}</TableCell>
                     <TableCell>{unit.type === 'clinic' ? 'Clínica' : 'Individual'}</TableCell>
@@ -222,6 +235,15 @@ function AdminUnits() {
                     </TableCell>
                   </TableRow>
                 ))}
+                {filteredUnits.length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={7}>
+                      <Typography variant="body2" color="text.secondary">
+                        No hay unidades con ese nombre.
+                      </Typography>
+                    </TableCell>
+                  </TableRow>
+                )}
               </TableBody>
             </Table>
           </Box>
