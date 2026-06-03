@@ -106,14 +106,15 @@ function App() {
         <Toolbar
           sx={{
             alignItems: 'center',
-            justifyContent: 'space-between',
+            justifyContent: 'center',
             gap: 2,
-            flexWrap: { xs: 'wrap', sm: 'nowrap' },
+            position: 'relative',
             px: { xs: 2, sm: 3 },
             py: { xs: 1, sm: 0 },
+            minHeight: { xs: 64, sm: 80 },
           }}
         >
-          <Box sx={{ display: 'flex', alignItems: 'center', minWidth: 0 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minWidth: 0 }}>
             <Box
               component="img"
               src={logoUrl || defaultLogo}
@@ -129,7 +130,17 @@ function App() {
           </Box>
           {role && (
             <>
-              <Stack direction="row" spacing={1} alignItems="center" sx={{ flexShrink: 0 }}>
+              <Stack
+                direction="row"
+                spacing={1}
+                alignItems="center"
+                sx={{
+                  position: 'absolute',
+                  right: { xs: 12, sm: 24 },
+                  top: '50%',
+                  transform: 'translateY(-50%)',
+                }}
+              >
                 {role === 'doctor' && (
                   <Avatar
                     src={currentDoctor?.profileImageUrl}
