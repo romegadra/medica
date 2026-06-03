@@ -19,15 +19,17 @@ const statusLabels: Record<string, string> = {
   no_show: 'No asistió',
   cancelled: 'Cancelada',
   rescheduled: 'Reagendada',
+  paid: 'Pagada',
 }
-const statusColors: Record<string, 'default' | 'primary' | 'success' | 'warning' | 'error' | 'secondary'> = {
-  pending: 'warning',
-  scheduled: 'default',
-  confirmed: 'primary',
-  attended: 'success',
-  no_show: 'error',
-  cancelled: 'default',
-  rescheduled: 'secondary',
+const statusColors: Record<string, string> = {
+  pending: '#8d6e63',
+  scheduled: '#607d8b',
+  confirmed: '#1976d2',
+  attended: '#2e7d32',
+  no_show: '#c65f2f',
+  cancelled: '#9e9e9e',
+  rescheduled: '#6a1b9a',
+  paid: '#00796b',
 }
 
 function getDateKey(date: Date) {
@@ -169,7 +171,12 @@ function AgendaSidebar({ appointments, patients, selectedDate, onDateChange }: P
           ) : (
             selectedAppointments.map((appointment) => {
               const patient = patientById.get(appointment.patientId)
-              const status = appointment.attended ? 'attended' : appointment.status ?? 'scheduled'
+              const status = appointment.attended
+                ? 'attended'
+                : appointment.paymentType && appointment.status !== 'cancelled'
+                  ? 'paid'
+                  : appointment.status ?? 'scheduled'
+              const statusColor = statusColors[status] ?? statusColors.scheduled
               return (
                 <Paper key={appointment.id} sx={{ p: 1.25 }} elevation={0}>
                   <Stack spacing={0.75}>
@@ -180,7 +187,11 @@ function AgendaSidebar({ appointments, patients, selectedDate, onDateChange }: P
                       <Chip
                         label={statusLabels[status] ?? status}
                         size="small"
-                        color={statusColors[status] ?? 'default'}
+                        sx={{
+                          bgcolor: statusColor,
+                          color: '#fff',
+                          fontWeight: 700,
+                        }}
                       />
                   </Stack>
                   <Typography variant="caption" color="text.secondary">
