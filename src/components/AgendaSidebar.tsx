@@ -11,6 +11,24 @@ type Props = {
 }
 
 const weekDays = ['L', 'M', 'M', 'J', 'V', 'S', 'D']
+const statusLabels: Record<string, string> = {
+  pending: 'Pendiente',
+  scheduled: 'Agendada',
+  confirmed: 'Confirmada',
+  attended: 'Asistió',
+  no_show: 'No asistió',
+  cancelled: 'Cancelada',
+  rescheduled: 'Reagendada',
+}
+const statusColors: Record<string, 'default' | 'primary' | 'success' | 'warning' | 'error' | 'secondary'> = {
+  pending: 'warning',
+  scheduled: 'default',
+  confirmed: 'primary',
+  attended: 'success',
+  no_show: 'error',
+  cancelled: 'default',
+  rescheduled: 'secondary',
+}
 
 function getDateKey(date: Date) {
   const year = date.getFullYear()
@@ -138,14 +156,24 @@ function AgendaSidebar({ appointments, patients, selectedDate, onDateChange }: P
           ) : (
             selectedAppointments.map((appointment) => {
               const patient = patientById.get(appointment.patientId)
+              const status = appointment.attended ? 'attended' : appointment.status ?? 'scheduled'
               return (
                 <Paper key={appointment.id} sx={{ p: 1.25 }} elevation={0}>
-                  <Typography variant="body2" sx={{ fontWeight: 700 }}>
-                    {formatTime(appointment.start)} · {appointment.title}
-                  </Typography>
+                  <Stack spacing={0.75}>
+                    <Stack direction="row" spacing={1} alignItems="center" justifyContent="space-between">
+                      <Typography variant="body2" sx={{ fontWeight: 700 }}>
+                        {formatTime(appointment.start)} · {appointment.title}
+                      </Typography>
+                      <Chip
+                        label={statusLabels[status] ?? status}
+                        size="small"
+                        color={statusColors[status] ?? 'default'}
+                      />
+                    </Stack>
                   <Typography variant="caption" color="text.secondary">
                     {patient?.phone ?? 'Sin teléfono'}
                   </Typography>
+                  </Stack>
                 </Paper>
               )
             })
