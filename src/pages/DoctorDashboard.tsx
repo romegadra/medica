@@ -258,8 +258,20 @@ function DoctorDashboard() {
     setError(null)
   }
 
-  const handleSelect = (info: { startStr: string; endStr: string }) => {
+  const openAppointmentDialog = (startIso: string, endIso?: string) => {
     if (!doctorId || !canManageVisits) return
+    const end = endIso ?? addMinutes(startIso, constraints.slotMinutes)
+    const startDate = new Date(startIso)
+    const endDate = new Date(end)
+    if (!isWithinSchedule(startDate, endDate, selectedDoctorSchedules)) {
+      setError('La cita está fuera de tu horario disponible.')
+      return
+    }
+    if (isBlocked(startDate, endDate)) {
+      setError('La cita se cruza con un horario bloqueado.')
+      return
+    }
+
     setPatientId(doctorPatients[0]?.id ?? '')
     setAddingPatient(false)
     setNewPatientName('')
@@ -267,12 +279,16 @@ function DoctorDashboard() {
     setAppointmentStatus('scheduled')
     setPaymentType('')
     setNotes('')
-    setAppointmentStart(info.startStr)
-    setDurationMinutes(diffMinutes(info.startStr, info.endStr) || constraints.slotMinutes)
+    setAppointmentStart(startIso)
+    setDurationMinutes(diffMinutes(startIso, end) || constraints.slotMinutes)
     setMode('create')
     setEditingId(null)
     setError(null)
     setDialogOpen(true)
+  }
+
+  const handleSelect = (info: { startStr: string; endStr: string }) => {
+    openAppointmentDialog(info.startStr, info.endStr)
   }
 
   const handleSave = async () => {
@@ -419,6 +435,8 @@ function DoctorDashboard() {
           height="auto"
           editable={canManageVisits}
           selectable={canManageVisits}
+          longPressDelay={250}
+          selectLongPressDelay={250}
           events={events}
           eventContent={(info) => {
             const patientName = String(info.event.extendedProps.patientName || info.event.title)
@@ -442,7 +460,9 @@ function DoctorDashboard() {
             if (view === 'dayGridMonth') {
               calendarRef.current?.getApi().changeView('timeGridWeek', info.date)
               setView('timeGridWeek')
+              return
             }
+            openAppointmentDialog(info.date.toISOString())
           }}
           eventDrop={async (info) => {
             const appointment = appointments.find((item) => item.id === info.event.id)
@@ -534,9 +554,20 @@ function DoctorDashboard() {
                 <Typography variant="caption" color="text.secondary">
                   Teléfono del paciente
                 </Typography>
-                <Typography variant="body1" sx={{ fontWeight: 700 }}>
-                  {selectedPatient.phone || 'Sin teléfono registrado'}
-                </Typography>
+                {selectedPatient.phone ? (
+                  <Typography
+                    component="a"
+                    href={`tel:${selectedPatient.phone}`}
+                    variant="body1"
+                    sx={{ display: 'block', fontWeight: 700, color: 'primary.main', textDecoration: 'none' }}
+                  >
+                    {selectedPatient.phone}
+                  </Typography>
+                ) : (
+                  <Typography variant="body1" sx={{ fontWeight: 700 }}>
+                    Sin teléfono registrado
+                  </Typography>
+                )}
               </Paper>
             )}
             {mode === 'create' && canEditPatients && (
