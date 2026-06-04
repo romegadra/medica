@@ -85,6 +85,7 @@ export type Appointment = {
   cancelledAt?: string
   reminderSentAt?: string
   createdByReceptionistId?: string
+  createdByDoctorId?: string
 }
 
 export type DoctorSchedule = {

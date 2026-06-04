@@ -191,6 +191,18 @@ function DoctorDashboard() {
         : undefined,
     [editingAppointment, receptionists, showReceptionistOnCalendar],
   )
+  const editingCreatorDoctor = useMemo(
+    () =>
+      editingAppointment?.createdByDoctorId
+        ? doctors.find((item) => item.id === editingAppointment.createdByDoctorId)
+        : undefined,
+    [doctors, editingAppointment],
+  )
+  const editingCreatorName = editingReceptionist?.name
+    ? editingReceptionist.name
+    : editingCreatorDoctor?.name
+      ? `Dr(a). ${editingCreatorDoctor.name}`
+      : undefined
   const selectedDoctorSchedules = useMemo(
     () => doctorSchedules.filter((schedule) => schedule.doctorId === doctorId),
     [doctorSchedules, doctorId],
@@ -643,13 +655,13 @@ function DoctorDashboard() {
                 )}
               </Paper>
             )}
-            {mode === 'edit' && showReceptionistOnCalendar && (
+            {mode === 'edit' && (showReceptionistOnCalendar || editingAppointment?.createdByReceptionistId || editingAppointment?.createdByDoctorId) && (
               <Paper sx={{ p: 1.5 }} elevation={0}>
                 <Typography variant="caption" color="text.secondary">
                   Cita creada por
                 </Typography>
                 <Typography variant="body1" sx={{ fontWeight: 700 }}>
-                  {editingReceptionist?.name ?? 'No registrado'}
+                  {editingCreatorName ?? 'No registrado en esta cita'}
                 </Typography>
               </Paper>
             )}
