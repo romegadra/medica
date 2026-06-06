@@ -115,6 +115,8 @@ export type Constraints = {
   allowOverlap: boolean
   appointmentRemindersEnabled: boolean
   appointmentReminderIntervalMinutes: number
+  whatsappPatientNotificationsEnabled: boolean
+  whatsappDoctorNotificationsEnabled: boolean
 }
 
 export type AuditLog = {
