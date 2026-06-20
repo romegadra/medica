@@ -114,7 +114,7 @@ function AdminDashboard() {
         <Stack spacing={2}>
           <Typography variant="h6">Recordatorios de citas</Typography>
           <Typography variant="body2" color="text.secondary">
-            Configura el job que envía WhatsApp a pacientes un día antes de su cita.
+            Configura el job que envía WhatsApp a pacientes un día antes de su cita. Solo envía si las notificaciones a pacientes están activas.
           </Typography>
           <Stack direction="row" alignItems="center" spacing={1}>
             <Switch
@@ -141,6 +141,36 @@ function AdminDashboard() {
               Ejecutar ahora
             </Button>
           </Stack>
+        </Stack>
+      </Paper>
+
+      <Paper sx={{ p: 3 }} elevation={2}>
+        <Stack spacing={2}>
+          <Typography variant="h6">Notificaciones WhatsApp</Typography>
+          <Typography variant="body2" color="text.secondary">
+            Controla si el sistema envía mensajes a pacientes y doctores al crear, cambiar o cancelar citas.
+          </Typography>
+          <Stack direction="row" alignItems="center" spacing={1}>
+            <Switch
+              checked={form.whatsappPatientNotificationsEnabled}
+              onChange={(event) =>
+                handleChange('whatsappPatientNotificationsEnabled', event.target.checked)
+              }
+            />
+            <Typography variant="body2">Enviar WhatsApp a pacientes</Typography>
+          </Stack>
+          <Stack direction="row" alignItems="center" spacing={1}>
+            <Switch
+              checked={form.whatsappDoctorNotificationsEnabled}
+              onChange={(event) =>
+                handleChange('whatsappDoctorNotificationsEnabled', event.target.checked)
+              }
+            />
+            <Typography variant="body2">Enviar WhatsApp a doctores</Typography>
+          </Stack>
+          <Button variant="contained" onClick={handleSave}>
+            Guardar notificaciones
+          </Button>
         </Stack>
       </Paper>
 

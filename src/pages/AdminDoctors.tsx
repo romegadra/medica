@@ -35,6 +35,7 @@ function AdminDoctors() {
   const [canEditPatients, setCanEditPatients] = useState(true)
   const [canManageVisits, setCanManageVisits] = useState(true)
   const [notificationsEnabled, setNotificationsEnabled] = useState(true)
+  const [showReceptionistOnCalendar, setShowReceptionistOnCalendar] = useState(false)
   const [unitId, setUnitId] = useState(units[0]?.id ?? '')
   const [doctorSearch, setDoctorSearch] = useState('')
   const [editingDoctor, setEditingDoctor] = useState<Doctor | null>(null)
@@ -59,6 +60,7 @@ function AdminDoctors() {
       canEditPatients,
       canManageVisits,
       notificationsEnabled,
+      showReceptionistOnCalendar,
     })
     setName('')
     setEmail('')
@@ -68,6 +70,7 @@ function AdminDoctors() {
     setCanEditPatients(true)
     setCanManageVisits(true)
     setNotificationsEnabled(true)
+    setShowReceptionistOnCalendar(false)
   }
 
   useEffect(() => {
@@ -163,6 +166,15 @@ function AdminDoctors() {
             }
             label="Recibir notificaciones"
           />
+          <FormControlLabel
+            control={
+              <Switch
+                checked={showReceptionistOnCalendar}
+                onChange={(event) => setShowReceptionistOnCalendar(event.target.checked)}
+              />
+            }
+            label="Mostrar recepcionista en agenda"
+          />
           <TextField
             label="Unidad"
             select
@@ -195,7 +207,7 @@ function AdminDoctors() {
             sx={{ maxWidth: 360 }}
           />
           <Box sx={{ width: '100%', overflowX: 'auto' }}>
-            <Table size="small" sx={{ minWidth: 1120 }}>
+            <Table size="small" sx={{ minWidth: 1240 }}>
               <TableHead>
                 <TableRow>
                   <TableCell>Doctor</TableCell>
@@ -206,6 +218,7 @@ function AdminDoctors() {
                   <TableCell>Pacientes</TableCell>
                   <TableCell>Consultas</TableCell>
                   <TableCell>Notificaciones</TableCell>
+                  <TableCell>Recepción</TableCell>
                   <TableCell>Unidad</TableCell>
                   <TableCell align="right">Acciones</TableCell>
                 </TableRow>
@@ -223,6 +236,7 @@ function AdminDoctors() {
                     <TableCell>{doctor.canEditPatients ? 'Si' : 'No'}</TableCell>
                     <TableCell>{doctor.canManageVisits ? 'Si' : 'No'}</TableCell>
                     <TableCell>{doctor.notificationsEnabled ?? true ? 'Si' : 'No'}</TableCell>
+                    <TableCell>{doctor.showReceptionistOnCalendar ? 'Si' : 'No'}</TableCell>
                     <TableCell>{units.find((unit) => unit.id === doctor.unitId)?.name ?? 'Unidad'}</TableCell>
                     <TableCell align="right">
                       <IconButton size="small" onClick={() => setEditingDoctor(doctor)}>
@@ -236,7 +250,7 @@ function AdminDoctors() {
                 ))}
                 {filteredDoctors.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={10}>
+                    <TableCell colSpan={11}>
                       <Typography variant="body2" color="text.secondary">
                         No hay doctores con ese nombre.
                       </Typography>
@@ -340,6 +354,19 @@ function AdminDoctors() {
                 />
               }
               label="Recibir notificaciones"
+            />
+            <FormControlLabel
+              control={
+                <Switch
+                  checked={editingDoctor?.showReceptionistOnCalendar ?? false}
+                  onChange={(event) =>
+                    setEditingDoctor((prev) =>
+                      prev ? { ...prev, showReceptionistOnCalendar: event.target.checked } : prev,
+                    )
+                  }
+                />
+              }
+              label="Mostrar recepcionista en agenda"
             />
             <TextField
               label="Unidad"

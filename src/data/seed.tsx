@@ -223,4 +223,6 @@ export const constraints: Constraints = {
   allowOverlap: false,
   appointmentRemindersEnabled: false,
   appointmentReminderIntervalMinutes: 60,
+  whatsappPatientNotificationsEnabled: false,
+  whatsappDoctorNotificationsEnabled: true,
 }

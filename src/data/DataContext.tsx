@@ -95,6 +95,8 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     allowOverlap: false,
     appointmentRemindersEnabled: false,
     appointmentReminderIntervalMinutes: 60,
+    whatsappPatientNotificationsEnabled: false,
+    whatsappDoctorNotificationsEnabled: true,
   })
   const [unitList, setUnitList] = useState<Unit[]>([])
   const [doctorList, setDoctorList] = useState<Doctor[]>([])

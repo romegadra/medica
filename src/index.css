@@ -8,3 +8,13 @@ body {
 #root {
   min-height: 100vh;
 }
+
+.fc .fc-timegrid-event .fc-event-main {
+  height: 100%;
+}
+
+.fc .medflow-calendar-event {
+  box-sizing: border-box;
+  height: 100%;
+  padding: 2px 4px;
+}

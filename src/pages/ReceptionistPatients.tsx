@@ -1,4 +1,5 @@
 import {
+  Alert,
   Box,
   Button,
   Dialog,
@@ -24,6 +25,7 @@ import { useData } from '../data/DataContext'
 import { useAuth } from '../auth/AuthContext'
 import type { Patient } from '../data/types'
 import ReceptionistTabs from '../components/ReceptionistTabs'
+import { findDuplicatePatient } from '../utils/patients'
 
 function ReceptionistPatients() {
   const { doctors, patients, addPatient, updatePatient, removePatient } = useData()
@@ -38,6 +40,7 @@ function ReceptionistPatients() {
   const [address, setAddress] = useState('')
   const [historyDate, setHistoryDate] = useState('')
   const [patientSearch, setPatientSearch] = useState('')
+  const [formError, setFormError] = useState<string | null>(null)
   const [editingPatient, setEditingPatient] = useState<Patient | null>(null)
   const [deletePatient, setDeletePatient] = useState<Patient | null>(null)
 
@@ -51,21 +54,31 @@ function ReceptionistPatients() {
     return doctorPatients.filter((patient) => patient.name.toLowerCase().includes(normalized))
   }, [doctorPatients, patientSearch])
 
-  const handleAdd = () => {
+  const handleAdd = async () => {
     const trimmed = name.trim()
     if (!trimmed || !doctorId) return
-    addPatient({
-      id: `pat-${Date.now()}`,
-      doctorId,
-      name: trimmed,
-      phone: phone.trim() || undefined,
-      address: address.trim() || undefined,
-      historyDate: historyDate || undefined,
-    })
-    setName('')
-    setPhone('')
-    setAddress('')
-    setHistoryDate('')
+    const duplicate = findDuplicatePatient(doctorPatients, { doctorId, name: trimmed, phone })
+    if (duplicate) {
+      setFormError(`El paciente ya existe: ${duplicate.name}. Revisa la lista antes de crear otro registro.`)
+      return
+    }
+    try {
+      await addPatient({
+        id: `pat-${Date.now()}`,
+        doctorId,
+        name: trimmed,
+        phone: phone.trim() || undefined,
+        address: address.trim() || undefined,
+        historyDate: historyDate || undefined,
+      })
+      setName('')
+      setPhone('')
+      setAddress('')
+      setHistoryDate('')
+      setFormError(null)
+    } catch (err) {
+      setFormError(err instanceof Error ? err.message : 'No se pudo agregar el paciente.')
+    }
   }
 
   useEffect(() => {
@@ -139,6 +152,7 @@ function ReceptionistPatients() {
             value={historyDate}
             onChange={(event) => setHistoryDate(event.target.value)}
           />
+          {formError && <Alert severity="warning">{formError}</Alert>}
           <Button variant="contained" onClick={handleAdd} disabled={!name.trim()}>
             Agregar paciente
           </Button>
