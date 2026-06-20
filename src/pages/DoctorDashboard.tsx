@@ -9,6 +9,7 @@ import '@fullcalendar/daygrid/main.css'
 import '@fullcalendar/timegrid/main.css'
 import {
   Alert,
+  Autocomplete,
   Box,
   Button,
   Dialog,
@@ -34,6 +35,7 @@ import { useData } from '../data/DataContext'
 import type { Appointment, DoctorBlockedTime } from '../data/types'
 import DoctorTabs from '../components/DoctorTabs'
 import AgendaSidebar from '../components/AgendaSidebar'
+import { findDuplicatePatient } from '../utils/patients'
 
 type CalendarView = 'timeGridWeek' | 'dayGridMonth'
 type DialogMode = 'create' | 'edit'
@@ -362,6 +364,17 @@ function DoctorDashboard() {
           setError('Ingresa un nombre para el nuevo paciente.')
           return
         }
+        const duplicate = findDuplicatePatient(doctorPatients, {
+          doctorId,
+          name: newPatientName,
+          phone: newPatientPhone,
+        })
+        if (duplicate) {
+          setError(`El paciente ya existe: ${duplicate.name}. Selecciónalo de la lista en lugar de crearlo de nuevo.`)
+          setPatientId(duplicate.id)
+          setAddingPatient(false)
+          return
+        }
         const createdPatient = await addPatient({
           id: `pat-${Date.now()}`,
           doctorId,
@@ -411,6 +424,8 @@ function DoctorDashboard() {
       }
 
       resetDialog()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'No se pudo guardar la cita.')
     } finally {
       setIsSavingAppointment(false)
     }
@@ -620,19 +635,19 @@ function DoctorDashboard() {
             {doctorPatients.length === 0 ? (
               <Alert severity="info">No tienes pacientes registrados.</Alert>
             ) : (
-              <TextField
-                label="Paciente"
-                select
-                value={patientId}
-                onChange={(event) => setPatientId(event.target.value)}
+              <Autocomplete
+                options={doctorPatients}
+                getOptionLabel={(patient) =>
+                  patient.phone ? `${patient.name} · ${patient.phone}` : patient.name
+                }
+                value={doctorPatients.find((patient) => patient.id === patientId) ?? null}
+                onChange={(_, patient) => setPatientId(patient?.id ?? '')}
+                isOptionEqualToValue={(option, value) => option.id === value.id}
                 disabled={addingPatient}
-              >
-                {doctorPatients.map((patient) => (
-                  <MenuItem key={patient.id} value={patient.id}>
-                    {patient.name}
-                  </MenuItem>
-                ))}
-              </TextField>
+                renderInput={(params) => (
+                  <TextField {...params} label="Paciente" placeholder="Buscar por nombre o teléfono" />
+                )}
+              />
             )}
             {!addingPatient && selectedPatient && (
               <Paper sx={{ p: 1.5 }} elevation={0}>

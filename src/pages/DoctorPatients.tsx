@@ -1,4 +1,5 @@
 import {
+  Alert,
   Box,
   Button,
   Dialog,
@@ -23,6 +24,7 @@ import { useAuth } from '../auth/AuthContext'
 import { useData } from '../data/DataContext'
 import type { Patient } from '../data/types'
 import DoctorTabs from '../components/DoctorTabs'
+import { findDuplicatePatient } from '../utils/patients'
 
 function DoctorPatients() {
   const { doctorId } = useAuth()
@@ -34,6 +36,7 @@ function DoctorPatients() {
   const [address, setAddress] = useState('')
   const [historyDate, setHistoryDate] = useState('')
   const [patientSearch, setPatientSearch] = useState('')
+  const [formError, setFormError] = useState<string | null>(null)
   const [editingPatient, setEditingPatient] = useState<Patient | null>(null)
   const [deletePatient, setDeletePatient] = useState<Patient | null>(null)
 
@@ -47,21 +50,31 @@ function DoctorPatients() {
     return doctorPatients.filter((patient) => patient.name.toLowerCase().includes(normalized))
   }, [doctorPatients, patientSearch])
 
-  const handleAdd = () => {
+  const handleAdd = async () => {
     const trimmed = name.trim()
     if (!trimmed || !doctorId) return
-    addPatient({
-      id: `pat-${Date.now()}`,
-      doctorId,
-      name: trimmed,
-      phone: phone.trim() || undefined,
-      address: address.trim() || undefined,
-      historyDate: historyDate || undefined,
-    })
-    setName('')
-    setPhone('')
-    setAddress('')
-    setHistoryDate('')
+    const duplicate = findDuplicatePatient(doctorPatients, { doctorId, name: trimmed, phone })
+    if (duplicate) {
+      setFormError(`El paciente ya existe: ${duplicate.name}. Revisa la lista antes de crear otro registro.`)
+      return
+    }
+    try {
+      await addPatient({
+        id: `pat-${Date.now()}`,
+        doctorId,
+        name: trimmed,
+        phone: phone.trim() || undefined,
+        address: address.trim() || undefined,
+        historyDate: historyDate || undefined,
+      })
+      setName('')
+      setPhone('')
+      setAddress('')
+      setHistoryDate('')
+      setFormError(null)
+    } catch (err) {
+      setFormError(err instanceof Error ? err.message : 'No se pudo agregar el paciente.')
+    }
   }
 
   const handleEditSave = () => {
@@ -124,6 +137,7 @@ function DoctorPatients() {
             onChange={(event) => setHistoryDate(event.target.value)}
             disabled={!canEditPatients}
           />
+          {formError && <Alert severity="warning">{formError}</Alert>}
           <Button variant="contained" onClick={handleAdd} disabled={!name.trim() || !canEditPatients}>
             Agregar paciente
           </Button>
